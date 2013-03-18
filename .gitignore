@@ -9,3 +9,4 @@ dist
 
 # testing
 *.log
+__pycache__
