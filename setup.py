@@ -3,7 +3,7 @@ from distutils.core import setup
 # retrieve the version number
 from coap import coapVersion
 VERSION     = '.'.join([str(v) for v in coapVersion.VERSION])
-with open('README.txt') as f
+with open('README.txt') as f:
     LONG_DESCRIPTION = f.readlines()
 
 setup(
