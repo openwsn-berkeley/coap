@@ -6,6 +6,7 @@ docs
 
 # Release
 dist
+MANIFEST
 
 # testing
 *.log

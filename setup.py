@@ -4,7 +4,9 @@ from distutils.core import setup
 from coap import coapVersion
 VERSION     = '.'.join([str(v) for v in coapVersion.VERSION])
 with open('README.txt') as f:
-    LONG_DESCRIPTION = f.readlines()
+    LONG_DESCRIPTION    = f.read()
+with open('COPYING.txt') as f:
+    LICENSE             = f.read()
 
 setup(
     name           = "coap",
@@ -13,8 +15,11 @@ setup(
     author         = "Thomas Watteyne",
     author_email   = "watteyne@eecs.berkeley.edu",
     description    = "A CoAP Python library",
+    long_description = LONG_DESCRIPTION,
     url            = "http://www.openwsn.org/",
     keywords       = ["CoAP","Internet of Things","IETF CORE"],
+    license        = LICENSE,
+    platforms      = ['platform-independent'],
     classifiers    = [
         "Development Status :: 1 - Planning",
         "Intended Audience :: Developers",
@@ -32,5 +37,4 @@ setup(
         "Topic :: Software Development :: Libraries",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
-    long_description = LONG_DESCRIPTION,
 )
