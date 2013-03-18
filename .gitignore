@@ -1,5 +1,8 @@
 *.py[cod]
 
+# Doxygen documentation
+docs
+
 # C extensions
 *.so
 
