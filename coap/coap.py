@@ -1,3 +1,11 @@
+import logging
+class NullHandler(logging.Handler):
+    def emit(self, record):
+        pass
+log = logging.getLogger('coap')
+log.setLevel(logging.ERROR)
+log.addHandler(NullHandler())
+
 import threading
 
 import coapDefines as defines
@@ -31,7 +39,8 @@ class coap(object):
     
     #===== server
     
-    def addResource():
+    def addResource(newResource):
+        assert isinstance(newResource,coapResource)
         raise NotImplementedError()
     
     def startServer():
@@ -41,4 +50,5 @@ class coap(object):
         raise NotImplementedError()
     
     #======================== private ===============================
-    
+
+class coapUdpListener(threading.Thread)
