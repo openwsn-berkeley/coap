@@ -24,11 +24,22 @@ class coap(object):
         self.dataLock       = threading.Lock()
         self.resources      = []
         if testing:
-            self.listener   = ListenerDispatcher(self.ipAddress,self.udpPort)
+            self.listener   = ListenerDispatcher(
+                ipAddress   = self.ipAddress,
+                udpPort     = self.udpPort,
+                callback    = self._messageNotification,
+            )
         else:
-            self.listener   = ListenerUdp(self.ipAddress,self.udpPort)
+            self.listener   = ListenerUdp(
+                ipAddress   = self.ipAddress,
+                udpPort     = self.udpPort,
+                callback    = self._messageNotification,
+            )
     
     #======================== public ================================
+    
+    def close(self):
+        self.listener.close()
     
     #===== client
     
@@ -52,3 +63,5 @@ class coap(object):
     
     #======================== private ===============================
     
+    def _messageNotification(self,timestamp,sender,data):
+        pass
