@@ -9,17 +9,24 @@ log.addHandler(NullHandler())
 import threading
 
 import coapDefines as defines
+from ListenerDispatcher import ListenerDispatcher
+from ListenerUdp        import ListenerUdp
 
 class coap(object):
     
-    def __init__(udpPort=defines.DEFAULT_UDP_PORT):
+    def __init__(self,ipAddress='',udpPort=defines.DEFAULT_UDP_PORT,testing=False):
         
         # store params
-        self.udpPort    = udpPort
+        self.ipAddress      = ipAddress
+        self.udpPort        = udpPort
         
         # local variables
-        self.dataLock   = threading.Lock()
-        self.resources  = []
+        self.dataLock       = threading.Lock()
+        self.resources      = []
+        if testing:
+            self.listener   = ListenerDispatcher(self.ipAddress,self.udpPort)
+        else:
+            self.listener   = ListenerUdp(self.ipAddress,self.udpPort)
     
     #======================== public ================================
     
@@ -43,12 +50,5 @@ class coap(object):
         assert isinstance(newResource,coapResource)
         raise NotImplementedError()
     
-    def startServer():
-        raise NotImplementedError()
-    
-    def stopServer():
-        raise NotImplementedError()
-    
     #======================== private ===============================
-
-class coapUdpListener(threading.Thread)
+    

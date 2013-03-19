@@ -2,12 +2,13 @@ import logging
 class NullHandler(logging.Handler):
     def emit(self, record):
         pass
-log = logging.getLogger('ListenerUdp')
+log = logging.getLogger('ListenerDispatcher')
 log.setLevel(logging.ERROR)
 log.addHandler(NullHandler())
 
 import socket
 import time
+import threading
 
 from pydispatch import dispatcher
 
