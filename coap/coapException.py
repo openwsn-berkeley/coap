@@ -18,14 +18,19 @@ class coapException(Exception):
     def __str__(self):
         return self.reason
 
+#============================ formatting ======================================
+
+class coapMalformattedUri(coapException):
+    pass
+
 #============================ return codes ====================================
 
-class coapRc(Exception):
+class coapRc(coapException):
     
     def __init__(self,rc,description=None):
         assert isinstance(rc,tuple)==tuple
         assert len(rc)==2
-        for i in range(2)
+        for i in range(2):
            assert type(rc(i))==int
         if description:
            assert type(description)==str

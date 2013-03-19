@@ -10,25 +10,23 @@ import coapException as e
 
 class coapResource(object):
     
-    def __init__(self,uri,callback):
+    def __init__(self,uri):
         
         assert type(uri)==str
-        assert callable(callback)
         
         # store params
         self.uri      = uri
-        self.callback = callback
     
     #======================== abstract methods ======================
     
-    def GET(options=[]):
+    def GET(self,options=[]):
         raise e.coapRcMethodNotAllowed()
     
-    def PUT(options=[],payload=None):
+    def PUT(self,options=[],payload=None):
         raise e.coapRcMethodNotAllowed()
     
-    def POST(options=[],payload=None):
+    def POST(self,options=[],payload=None):
         raise e.coapRcMethodNotAllowed()
     
-    def DELETE(options=[]):
+    def DELETE(self,options=[]):
         raise e.coapRcMethodNotAllowed()
