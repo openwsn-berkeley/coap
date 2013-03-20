@@ -71,7 +71,12 @@ class coap(object):
             options     = options,
         )
         
-        #poipoipoiraise NotImplementedError()
+        # send
+        self.listener.sendMessage(
+            destIp      = destIp,
+            destPort    = destPort,
+            msg         = message,
+        )
     
     def PUT(self,uri,confirmable=True,options=[],payload=None):
         raise NotImplementedError()

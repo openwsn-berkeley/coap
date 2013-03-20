@@ -53,7 +53,7 @@ class ListenerDispatcher(Listener.Listener):
     def close(self):
         # disconnect from dispatcher
         dispatcher.disconnect(
-            receiver = self.getMessage,
+            receiver = self._messageNotification,
             signal   = (self.ipAddress,self.udpPort),
         )
         

@@ -30,7 +30,7 @@ class Listener(threading.Thread):
     
     #======================== virtual methods =================================
     
-    def getMessage(self):
+    def sendMessage(self,destIp,destPort,msg):
         raise NotImplementedError()
     
     def close(self):

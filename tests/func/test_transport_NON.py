@@ -58,7 +58,7 @@ def test_GET(logFixture):
         uri         = 'coap://[{0}]:{1}/{2}/'.format(IPADDRESS2,coapDefines.DEFAULT_UDP_PORT,RESOURCE),
         confirmable = False,
     )
-    #poipoipoiassert reply==DUMMYVAL
+    assert reply==DUMMYVAL
     
     # close them
     coap1.close()
