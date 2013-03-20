@@ -10,7 +10,9 @@ import threading
 
 import coapResource
 import coapOption
+import coapMessage
 import coapDefines as d
+import coapTokenizer
 import coapUri
 from ListenerDispatcher import ListenerDispatcher
 from ListenerUdp        import ListenerUdp
@@ -60,9 +62,6 @@ class coap(object):
         else:
             type = d.TYPE_NON
         
-        # get a new token
-        token           = 
-        
         # build message
         message = coapMessage.buildMessage(
             type        = type,
@@ -72,7 +71,7 @@ class coap(object):
             options     = options,
         )
         
-        raise NotImplementedError()
+        #poipoipoiraise NotImplementedError()
     
     def PUT(self,uri,confirmable=True,options=[],payload=None):
         raise NotImplementedError()

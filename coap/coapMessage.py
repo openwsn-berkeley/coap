@@ -15,7 +15,7 @@ def sortOptions(options):
     # TODO implement sorting when more options are implemented
     return options
 
-def buildMessage(type,token,code,messageId,options,payload):
+def buildMessage(type,token,code,messageId,options,payload=[]):
     assert type in d.TYPE_ALL
     assert code in d.METHOD_ALL
     
@@ -31,7 +31,7 @@ def buildMessage(type,token,code,messageId,options,payload):
         raise ValueError('token {0} too long'.format(token))
     
     # header
-    message += [COAP_VERSION<<6 | type<<4 | TKL]
+    message += [d.COAP_VERSION<<6 | type<<4 | TKL]
     message += [code]
     message += u.int2buf(messageId,2)
     message += u.int2buf(token,TKL)
@@ -45,4 +45,8 @@ def buildMessage(type,token,code,messageId,options,payload):
         lastOptionNum = option.optionNumber
     
     # payload
+    if payload:
+        message += [d.COAP_PAYLOAD_MARKER]
+    message += payload
+    
     return message

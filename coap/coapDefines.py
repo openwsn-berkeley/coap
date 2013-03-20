@@ -1,5 +1,6 @@
 DEFAULT_UDP_PORT                       = 5683
 COAP_VERSION                           = 1
+COAP_PAYLOAD_MARKER                    = 0xff
 COAP_SCHEME                            = 'coap://'
 
 # CoAP Message Types
