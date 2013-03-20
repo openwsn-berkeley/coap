@@ -6,10 +6,13 @@ log = logging.getLogger('coapOption')
 log.setLevel(logging.ERROR)
 log.addHandler(NullHandler())
 
+import coapDefines
+
 class coapOption(object):
     
-    def __init__(self):
-        pass
+    def __init__(self,optionNumber):
+        # store params
+        self.optionNumber = optionNumber
 
 class UriPath(coapOption):
     
@@ -19,4 +22,7 @@ class UriPath(coapOption):
         self.path = path
         
         # initialize parent
-        coapOption.__init__(self)
+        coapOption.__init__(self,coapDefines.OPTION_NUM_URIPATH)
+    
+    def __repr__(self):
+        return 'UriPath(path={0})'.format(self.path)

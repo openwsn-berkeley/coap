@@ -11,7 +11,7 @@ import threading
 import coapResource
 import coapOption
 import coapDefines
-import coapException as e
+import coapUri
 from ListenerDispatcher import ListenerDispatcher
 from ListenerUdp        import ListenerUdp
 
@@ -48,8 +48,10 @@ class coap(object):
     
     def GET(self,uri,confirmable=True,options=[]):
         
-        # add URI to options
-        options += self._uri2options(uri)
+        (destIp,destPort,uriOptions) = coapUri.uri2options(uri)
+        
+        # add URI options
+        options += uriOptions
         
         # build message
         message = self.buildMessages(options,confirmable)
@@ -78,40 +80,3 @@ class coap(object):
     def _messageNotification(self,timestamp,sender,data):
         pass
     
-    @classmethod
-    def _uri2options(self,uri):
-        
-        options = []
-        
-        # scheme
-        if not uri.startswith(coapDefines.COAP_SCHEME):
-            raise e.coapMalformattedUri('does not start with {0}'.format(coapDefines.COAP_SCHEME))
-        uri = uri.split(coapDefines.COAP_SCHEME,1)[1]
-        
-        # ip address and port
-        ipPort = uri.split('/')[0]
-        temp   = ipPort.split(':')
-        if   len(temp)==1:
-            ip   = temp[0]
-            port = coapDefines.DEFAULT_UDP_PORT
-        elif len(temp)==2:
-            ip   = temp[0]
-            try:
-                port = int(temp[1])
-            except ValueError:
-                e.coapMalformattedUri('invalud port'.format(temp[1]))
-        else:
-            raise e.coapMalformattedUri('invalud ip address and port'.format(temp))
-        uri = uri.split(ipPort,1)[1]
-        
-        # TODO: use DNS to resolve name into IP and add Uri-host option
-        
-        # Uri-path
-        paths = uri.split('&')[0].split('/')
-        for p in paths:
-            options += [coapOption.UriPath(p)]
-        
-        # Uri-query
-        # TODO
-        
-        return (ip,port,options)

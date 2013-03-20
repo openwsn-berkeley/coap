@@ -20,7 +20,8 @@ log.addHandler(utils.NullHandler())
 #============================ defines ===============================
 
 LOG_MODULES = [
-    'conftest'
+    'conftest',
+    'coapUri',
 ]
 
 #============================ fixtures ==============================
@@ -40,7 +41,6 @@ def loggingSetup(request):
     logHandler = logging.handlers.RotatingFileHandler(
        filename    = '{0}.log'.format(moduleName),
        mode        = 'w',
-       maxBytes    = 2000000,
        backupCount = 5,
     )
     logHandler.setFormatter(
