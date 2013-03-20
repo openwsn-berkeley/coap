@@ -21,7 +21,9 @@ log.addHandler(utils.NullHandler())
 
 LOG_MODULES = [
     'conftest',
+    'coap',
     'coapUri',
+    'ListenerDispatcher',
 ]
 
 #============================ fixtures ==============================

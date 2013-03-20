@@ -23,6 +23,9 @@ class coapException(Exception):
 class coapMalformattedUri(coapException):
     pass
 
+class messageFormatError(coapException):
+    pass
+
 #============================ return codes ====================================
 
 class coapRc(coapException):

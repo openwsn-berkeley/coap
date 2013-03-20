@@ -12,6 +12,7 @@ import threading
 from pydispatch import dispatcher
 
 import Listener
+import coapUtils as u
 
 class ListenerDispatcher(Listener.Listener):
     
@@ -69,7 +70,7 @@ class ListenerDispatcher(Listener.Listener):
         timestamp = time.time()
         
         # log
-        log.debug("got {2} from {1} at {0}".format(timestamp,sender,data))
+        log.debug("got {2} from {1} at {0}".format(timestamp,sender,u.formatBuf(data)))
         
         # call the callback
         self.callback(timestamp,sender,data)

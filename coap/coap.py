@@ -11,9 +11,10 @@ import threading
 import coapResource
 import coapOption
 import coapMessage
-import coapDefines as d
+import coapDefines   as d
 import coapTokenizer
 import coapUri
+import coapUtils     as u
 from ListenerDispatcher import ListenerDispatcher
 from ListenerUdp        import ListenerUdp
 
@@ -98,5 +99,11 @@ class coap(object):
     #======================== private ===============================
     
     def _messageNotification(self,timestamp,sender,data):
-        pass
-    
+        
+        output  = []
+        output += ['got message:']
+        output += ['- timestamp: {0}'.format(timestamp)]
+        output += ['- sender:    {0}'.format(sender)]
+        output += ['- data:      {0}'.format(u.formatBuf(data))]
+        output  = '\n'.join(output)
+        log.debug(output)

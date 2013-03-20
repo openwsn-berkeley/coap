@@ -41,7 +41,7 @@ def buildMessage(type,token,code,messageId,options,payload=[]):
     lastOptionNum = 0
     for option in options:
         assert option.optionNumber>=lastOptionNum
-        message += [option.toBytes(lastOptionNum)]
+        message += option.toBytes(lastOptionNum)
         lastOptionNum = option.optionNumber
     
     # payload
@@ -50,3 +50,36 @@ def buildMessage(type,token,code,messageId,options,payload=[]):
     message += payload
     
     return message
+
+def parseMessage(message):
+    
+    returnVal = {}
+    
+    # header
+    if len(message<4):
+        raise messageFormatError('message to short, {0} bytes: not space for header'.format(len(message)))
+    returnVal['version']     = (message[0]>>6)&0x03
+    if returnVal['version']!=d.COAP_VERSION:
+        raise messageFormatError('invalid CoAP version {0}'.format(returnVal['version']))
+    returnVal['type']        = (message[0]>>4)&0x03
+    if returnVal['type'] not in d.TYPE_ALL:
+        raise messageFormatError('invalid message type {0}'.format(returnVal['type']))
+    TKL  = message[0]&0x0f
+    if TKL>8:
+        raise messageFormatError('TKL too large {0}'.format(TKL))
+    returnVal['messageId']   = u.buf2int(message[2:4])
+    message = message[4:]
+    
+    # token
+    if len(message<TKL):
+        raise messageFormatError('message to short, {0} bytes: not space for token'.format(len(message)))
+    token  = u.buf2int(message[:TKL])
+    message = message[TKL:]
+    
+    # options
+    raise NotImplementedError()
+    
+    # payload
+    raise NotImplementedError()
+    
+    return parsedMessage

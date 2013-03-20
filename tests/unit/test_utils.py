@@ -53,3 +53,19 @@ def test_int2buf(logFixture, validint2buf):
     log.debug('result: {0}'.format(result))
     
     assert tuple(result)==output
+
+def test_buf2int(logFixture, validint2buf):
+    
+    (val,_,buf) = validint2buf
+    
+    if not buf:
+        return
+    
+    log.debug('val:    {0}'.format(val))
+    log.debug('buf:    {0}'.format(buf))
+    
+    result = coapUtils.buf2int(buf)
+    
+    log.debug('result: {0}'.format(result))
+    
+    assert result==val

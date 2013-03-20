@@ -99,6 +99,6 @@ def uri2options(uri):
     if len(uri.split('?'))>1:
         queries   = [q for q in uri.split('?')[1].split('&') if q]
         log.debug('queries  : {0}'.format(queries))
-        # TODO
+        raise NotImplementedError()
     
     return (ip,port,options)
