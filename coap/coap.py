@@ -10,14 +10,14 @@ import threading
 
 import coapResource
 import coapOption
-import coapDefines
+import coapDefines as d
 import coapUri
 from ListenerDispatcher import ListenerDispatcher
 from ListenerUdp        import ListenerUdp
 
 class coap(object):
     
-    def __init__(self,ipAddress='',udpPort=coapDefines.DEFAULT_UDP_PORT,testing=False):
+    def __init__(self,ipAddress='',udpPort=d.DEFAULT_UDP_PORT,testing=False):
         
         # store params
         self.ipAddress      = ipAddress
@@ -25,6 +25,7 @@ class coap(object):
         
         # local variables
         self.resourceLock   = threading.Lock()
+        self.tokenizer      = coapTokenizer.coapTokenizer()
         self.resources      = []
         if testing:
             self.listener   = ListenerDispatcher(
@@ -53,8 +54,23 @@ class coap(object):
         # add URI options
         options += uriOptions
         
+        # determine message type
+        if confirmable:
+            type = d.TYPE_CON
+        else:
+            type = d.TYPE_NON
+        
+        # get a new token
+        token           = 
+        
         # build message
-        message = self.buildMessages(options,confirmable)
+        message = coapMessage.buildMessage(
+            type        = type,
+            token       = self.tokenizer.getNewToken(destIp,destPort),
+            code        = d.METHOD_GET,
+            messageId   = self.tokenizer.getNewMessageId(destIp,destPort),
+            options     = options,
+        )
         
         raise NotImplementedError()
     

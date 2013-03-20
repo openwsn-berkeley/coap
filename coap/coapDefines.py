@@ -1,5 +1,18 @@
 DEFAULT_UDP_PORT                       = 5683
+COAP_VERSION                           = 1
 COAP_SCHEME                            = 'coap://'
+
+# CoAP Message Types
+TYPE_CON                               = 0
+TYPE_NON                               = 1
+TYPE_ACK                               = 2
+TYPE_RST                               = 3
+TYPE_ALL = [
+    TYPE_CON,
+    TYPE_NON,
+    TYPE_ACK,
+    TYPE_RST,
+]
 
 # CoAP Method Codes
 METHOD_GET                             = 1
@@ -82,6 +95,22 @@ OPTION_NUM_ACCEPT                      = 16
 OPTION_NUM_LOCATIONQUERY               = 20
 OPTION_NUM_PROXYURI                    = 35
 OPTION_NUM_PROXYSCHEME                 = 39
+OPTION_NUM_ALL = [
+    OPTION_NUM_IFMATCH,
+    OPTION_NUM_URIHOST,
+    OPTION_NUM_ETAG,
+    OPTION_NUM_IFNONEMATCH,
+    OPTION_NUM_URIPORT,
+    OPTION_NUM_LOCATIONPATH,
+    OPTION_NUM_URIPATH,
+    OPTION_NUM_CONTENTFORMAT,
+    OPTION_NUM_MAXAGE,
+    OPTION_NUM_URIQUERY,
+    OPTION_NUM_ACCEPT,
+    OPTION_NUM_LOCATIONQUERY,
+    OPTION_NUM_PROXYURI,
+    OPTION_NUM_PROXYSCHEME,
+]
 
 # CoAP Content-Format Registry
 FORMAT_TEXTPLAIN                       = 0
