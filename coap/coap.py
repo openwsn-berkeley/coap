@@ -8,12 +8,12 @@ log.addHandler(NullHandler())
 
 import threading
 
-import coapResource     as r
-import coapException    as e
-import coapMessage      as m
-import coapDefines      as d
 import coapTokenizer    as t
 import coapUtils        as u
+import coapMessage      as m
+import coapException    as e
+import coapResource     as r
+import coapDefines      as d
 import coapUri
 from ListenerDispatcher import ListenerDispatcher
 from ListenerUdp        import ListenerUdp
@@ -66,18 +66,18 @@ class coap(object):
         
         # build message
         message = m.buildMessage(
-            type        = type,
-            token       = self.tokenizer.getNewToken(destIp,destPort),
-            code        = d.METHOD_GET,
-            messageId   = self.tokenizer.getNewMessageId(destIp,destPort),
-            options     = options,
+            type             = type,
+            token            = self.tokenizer.getNewToken(destIp,destPort),
+            code             = d.METHOD_GET,
+            messageId        = self.tokenizer.getNewMessageId(destIp,destPort),
+            options          = options,
         )
         
         # send
         self.listener.sendMessage(
-            destIp      = destIp,
-            destPort    = destPort,
-            msg         = message,
+            destIp           = destIp,
+            destPort         = destPort,
+            msg              = message,
         )
     
     def PUT(self,uri,confirmable=True,options=[],payload=None):
@@ -118,6 +118,22 @@ class coap(object):
             log.warning('malformed message {0}: {1}'.format(u.formatBuf(bytes),str(err)))
             return
         
+        if   message['type']==d.TYPE_CON:
+            self._handleReceivedCON(timestamp,sender,message)
+        elif message['type']==d.TYPE_NON:
+            self._handleReceivedNON(timestamp,sender,message)
+        elif message['type']==d.TYPE_ACK:
+            self._handleReceivedACK(timestamp,sender,message)
+        elif message['type']==d.TYPE_RST:
+            self._handleReceivedRST(timestamp,sender,message)
+    
+    def _handleReceivedCON(self,timestamp,sender,message):
+        raise NotImplementedError()
+    
+    def _handleReceivedNON(self,timestamp,sender,message):
+        
+        (sourceIp,sourcePort) = sender
+        
         # retrieve path
         path = coapUri.options2path(message['options'])
         log.debug('path="{0}"'.format(path))
@@ -131,6 +147,53 @@ class coap(object):
                     break
         log.debug('resource={0}'.format(resource))
         
+        if resource:
+            try:
+                if   message['code']==d.METHOD_GET:
+                    returnVal = resource.GET(options=message['options'])
+                elif message['code']==d.METHOD_POST:
+                    returnVal = resource.GET(options=message['options'],payload=message['payload'])
+                elif message['code']==d.METHOD_PUT:
+                    returnVal = resource.PUT(options=message['options'],payload=message['payload'])
+                elif message['code']==d.METHOD_DELETE:
+                    returnVal = resource.DELETE(options=message['options'])
+                else:
+                    raise SystemError('unexpected code {0}'.format(message['code']))
+            except e.coapRcMethodNotAllowed:
+                # build message (MethodNotAllowed)
+                message = m.buildMessage(
+                    type          = d.TYPE_ACK,
+                    token         = message['token'],
+                    code          = d.COAP_RC_4_05_METHODNOTALLOWED,
+                    messageId     = message['messageId'],
+                )
+        else:
+            # build message (NotFound)
+            message = m.buildMessage(
+                type              = d.TYPE_ACK,
+                token             = message['token'],
+                code              = d.COAP_RC_4_04_NOTFOUND,
+                messageId         = message['messageId'],
+            )
+        
+        # build message (success)
+        message = m.buildMessage(
+            type                  = d.TYPE_ACK,
+            token                 = message['token'],
+            code                  = d.COAP_RC_2_05_CONTENT,
+            messageId             = message['messageId'],
+            payload               = returnVal
+        )
+        
+        # send
+        self.listener.sendMessage(
+            destIp           = sourceIp,
+            destPort         = sourcePort,
+            msg              = message,
+        )
+    
+    def _handleReceivedACK(self,timestamp,sender,message):
         raise NotImplementedError()
-        
-        
+    
+    def _handleReceivedRST(self,timestamp,sender,message):
+        raise NotImplementedError()

@@ -6,6 +6,8 @@ log = logging.getLogger('coapUtils')
 log.setLevel(logging.ERROR)
 log.addHandler(NullHandler())
 
+#===== converting
+
 def int2buf(val,len):
     returnVal  = []
     for i in range(len,0,-1):
@@ -17,6 +19,8 @@ def buf2int(buf):
     for i in range(len(buf)):
         returnVal += buf[i]<<(8*(len(buf)-1-i))
     return returnVal
+
+#===== formatting
 
 def formatBuf(buf):
     return '({0} bytes) {1}'.format(

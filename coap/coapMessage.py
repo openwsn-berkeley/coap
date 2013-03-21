@@ -6,18 +6,18 @@ log = logging.getLogger('coapMessage')
 log.setLevel(logging.ERROR)
 log.addHandler(NullHandler())
 
-import coapDefines   as d
-import coapException as e
 import coapOption    as o
 import coapUtils     as u
+import coapException as e
+import coapDefines   as d
 
 def sortOptions(options):
     # TODO implement sorting when more options are implemented
     return options
 
-def buildMessage(type,token,code,messageId,options,payload=[]):
+def buildMessage(type,token,code,messageId,options=[],payload=[]):
     assert type in d.TYPE_ALL
-    assert code in d.METHOD_ALL
+    assert code in d.METHOD_ALL+d.COAP_RC_ALL
     
     message   = []
     

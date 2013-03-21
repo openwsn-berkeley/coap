@@ -36,7 +36,7 @@ class dummyResource(coapResource.coapResource):
     
     #======================== parent methods ==================================
     
-    def GET(options=[]):
+    def GET(self,options=[]):
         return DUMMYVAL
     
 #============================ tests ===========================================
