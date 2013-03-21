@@ -16,7 +16,7 @@ log.addHandler(u.NullHandler())
 
 #============================ fixtures ==============================
 
-VALIDURI = [
+URIANDOPTIONS = [
     (
         'coap://[aaaa::1]/',
         (
@@ -58,17 +58,31 @@ VALIDURI = [
     ),
 ]
 
-@pytest.fixture(params=VALIDURI)
-def validUri(request):
+@pytest.fixture(params=URIANDOPTIONS)
+def uriAndOptions(request):
+    return request.param
+
+OPTIONSANDPATH = [
+    (
+        (
+            coapOption.UriPath(path='test1'),
+            coapOption.UriPath(path='test2'),
+        ),
+        'test1/test2'
+    ),
+]
+
+@pytest.fixture(params=OPTIONSANDPATH)
+def optionsAndPath(request):
     return request.param
 
 #============================ helpers ===============================
 
 #============================ tests =================================
 
-def test_uri2options(logFixture, validUri):
+def test_uri2options(logFixture, uriAndOptions):
     
-    (input,output) = validUri
+    (input,output) = uriAndOptions
     
     log.debug('input:  {0}'.format(input))
     log.debug('output: {0}'.format(output))
@@ -82,4 +96,18 @@ def test_uri2options(logFixture, validUri):
     assert   result[1]==output[1]
     assert len(result[2])==len(output[2])
     for (resultPath,outputPath) in zip(result[2],output[2]):
-       assert repr(resultPath)==repr(outputPath)
+        assert repr(resultPath)==repr(outputPath)
+
+def test_options2path(logFixture, optionsAndPath):
+    
+    (options,path) = optionsAndPath
+    options = list(options)
+    
+    log.debug('options: {0}'.format(options))
+    log.debug('path:    {0}'.format(path))
+    
+    result = coapUri.options2path(options)
+    
+    log.debug('result: {0}'.format(result))
+    
+    assert result==path

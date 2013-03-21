@@ -102,3 +102,11 @@ def uri2options(uri):
         raise NotImplementedError()
     
     return (ip,port,options)
+
+def options2path(options):
+    returnVal = []
+    for option in options:
+        if isinstance(option,o.UriPath):
+            returnVal += [option.path]
+    returnVal = '/'.join(returnVal)
+    return returnVal
