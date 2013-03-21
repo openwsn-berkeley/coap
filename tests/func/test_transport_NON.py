@@ -31,7 +31,7 @@ class dummyResource(coapResource.coapResource):
         # initialize parent class
         coapResource.coapResource.__init__(
             self,
-            uri      = RESOURCE,
+            path = RESOURCE,
         )
     
     #======================== parent methods ==================================
@@ -55,7 +55,7 @@ def test_GET(logFixture):
     
     # have coap2 do a get
     reply = coap2.GET(
-        uri         = 'coap://[{0}]:{1}/{2}/'.format(IPADDRESS2,coapDefines.DEFAULT_UDP_PORT,RESOURCE),
+        uri         = 'coap://[{0}]:{1}/{2}/'.format(IPADDRESS1,coapDefines.DEFAULT_UDP_PORT,RESOURCE),
         confirmable = False,
     )
     assert reply==DUMMYVAL

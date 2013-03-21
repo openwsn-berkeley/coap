@@ -27,6 +27,7 @@ class coap(object):
         self.udpPort         = udpPort
         
         # local variables
+        self.name            = 'coap@[{0}]:{1}'.format(self.ipAddress,self.udpPort)
         self.resourceLock    = threading.Lock()
         self.tokenizer       = t.coapTokenizer()
         self.resources       = []
@@ -43,7 +44,7 @@ class coap(object):
                 callback     = self._messageNotification,
             )
     
-    #======================== public ================================
+    #======================== public ==========================================
     
     def close(self):
         self.listener.close()
@@ -93,15 +94,17 @@ class coap(object):
     def addResource(self,newResource):
         assert isinstance(newResource,r.coapResource)
         
+        log.debug('{0} adding resource at path="{1}"'.format(self.name,newResource.path))
+        
         with self.resourceLock:
             self.resources += [newResource]
     
-    #======================== private ===============================
+    #======================== private =========================================
     
     def _messageNotification(self,timestamp,sender,bytes):
         
         output  = []
-        output += ['got message:']
+        output += ['{0} got message:'.format(self.name)]
         output += ['- timestamp: {0}'.format(timestamp)]
         output += ['- sender:    {0}'.format(sender)]
         output += ['- bytes:     {0}'.format(u.formatBuf(bytes))]
@@ -116,6 +119,18 @@ class coap(object):
             return
         
         # retrieve path
+        path = coapUri.options2path(message['options'])
+        log.debug('path="{0}"'.format(path))
+        
+        # find resource that matches this path
+        resource = None
+        with self.resourceLock:
+            for r in self.resources:
+                if r.matchesPath(path):
+                    resource = r
+                    break
+        log.debug('resource={0}'.format(resource))
+        
         raise NotImplementedError()
         
         

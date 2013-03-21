@@ -12,22 +12,23 @@ import pytest
 
 import testUtils as utils
 
-#============================ logging ===============================
+#============================ logging =========================================
 
 log = logging.getLogger('conftest')
 log.addHandler(utils.NullHandler())
 
-#============================ defines ===============================
+#============================ defines =========================================
 
 LOG_MODULES = [
     'conftest',
     'coap',
     'coapUri',
     'coapOption',
+    'coapResource',
     'ListenerDispatcher',
 ]
 
-#============================ fixtures ==============================
+#============================ fixtures ========================================
 
 #===== logFixture
 

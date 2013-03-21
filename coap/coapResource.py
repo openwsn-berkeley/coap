@@ -6,18 +6,20 @@ log = logging.getLogger('coapResource')
 log.setLevel(logging.ERROR)
 log.addHandler(NullHandler())
 
+import re
+
 import coapException as e
 
 class coapResource(object):
     
-    def __init__(self,uri):
+    def __init__(self,path):
         
-        assert type(uri)==str
+        assert type(path)==str
         
         # store params
-        self.uri      = uri
+        self.path     = path
     
-    #======================== abstract methods ======================
+    #======================== abstract methods ================================
     
     def GET(self,options=[]):
         raise e.coapRcMethodNotAllowed()
@@ -30,3 +32,14 @@ class coapResource(object):
     
     def DELETE(self,options=[]):
         raise e.coapRcMethodNotAllowed()
+    
+    #======================== public ==========================================
+    
+    def matchesPath(self,pathToMatch):
+        log.debug('"{0}" matches "{1}"?'.format(pathToMatch,self.path))
+        temp_path        = self.path.lstrip('/').rstrip('/')
+        temp_pathToMatch = pathToMatch.lstrip('/').rstrip('/')
+        if re.match(temp_path,temp_pathToMatch):
+            return True
+        else:
+            return False
