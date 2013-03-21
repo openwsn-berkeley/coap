@@ -56,30 +56,38 @@ def parseMessage(message):
     returnVal = {}
     
     # header
-    if len(message<4):
-        raise messageFormatError('message to short, {0} bytes: not space for header'.format(len(message)))
+    if len(message)<4:
+        raise e.messageFormatError('message to short, {0} bytes: not space for header'.format(len(message)))
     returnVal['version']     = (message[0]>>6)&0x03
     if returnVal['version']!=d.COAP_VERSION:
-        raise messageFormatError('invalid CoAP version {0}'.format(returnVal['version']))
+        raise e.messageFormatError('invalid CoAP version {0}'.format(returnVal['version']))
     returnVal['type']        = (message[0]>>4)&0x03
     if returnVal['type'] not in d.TYPE_ALL:
-        raise messageFormatError('invalid message type {0}'.format(returnVal['type']))
+        raise e.messageFormatError('invalid message type {0}'.format(returnVal['type']))
     TKL  = message[0]&0x0f
     if TKL>8:
-        raise messageFormatError('TKL too large {0}'.format(TKL))
+        raise e.messageFormatError('TKL too large {0}'.format(TKL))
+    returnVal['code']        = message[1]
     returnVal['messageId']   = u.buf2int(message[2:4])
     message = message[4:]
     
     # token
-    if len(message<TKL):
-        raise messageFormatError('message to short, {0} bytes: not space for token'.format(len(message)))
-    token  = u.buf2int(message[:TKL])
+    if len(message)<TKL:
+        raise e.messageFormatError('message to short, {0} bytes: not space for token'.format(len(message)))
+    returnVal['token']       = u.buf2int(message[:TKL])
     message = message[TKL:]
     
     # options
-    raise NotImplementedError()
+    returnVal['options']     = []
+    currentOptionNumber      = 0
+    while True:
+        (option,message)     = o.parseOption(message,currentOptionNumber)
+        if not option:
+            break
+        returnVal['options']+= [option]
+        currentOptionNumber  = option.optionNumber
     
     # payload
-    raise NotImplementedError()
+    returnVal['payload']     = message
     
-    return parsedMessage
+    return returnVal

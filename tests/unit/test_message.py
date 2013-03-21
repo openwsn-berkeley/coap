@@ -112,3 +112,24 @@ def test_buildMessage(logFixture, messageAndBytes):
     log.debug('result:  {0}'.format(u.formatBuf(result)))
     
     assert tuple(result)==bytes
+
+def test_parseMessage(logFixture, messageAndBytes):
+    
+    (msg,bytes) = messageAndBytes
+    bytes = list(bytes)
+    
+    log.debug('bytes:   {0}'.format(u.formatBuf(bytes)))
+    log.debug('msg:     {0}'.format(msg))
+    
+    result = m.parseMessage(bytes)
+    
+    log.debug('result:  {0}'.format(result))
+    
+    assert result['type']         ==      msg[0]
+    assert result['token']        ==      msg[1]
+    assert result['code']         ==      msg[2]
+    assert result['messageId']    ==      msg[3]
+    assert len(result['options']) ==  len(msg[4])
+    for (o1,o2) in zip(result['options'],msg[4]):
+        assert repr(o1)==repr(o2)
+    assert result['payload']      == list(msg[5])

@@ -6,8 +6,11 @@ log = logging.getLogger('coapOption')
 log.setLevel(logging.ERROR)
 log.addHandler(NullHandler())
 
-import coapDefines as d
-import coapUtils   as u
+import coapDefines   as d
+import coapUtils     as u
+import coapException as e
+
+#============================ classes =========================================
 
 class coapOption(object):
     
@@ -78,3 +81,99 @@ class UriPath(coapOption):
     
     def getPayloadBytes(self):
         return [ord(b) for b in self.path]
+
+#============================ functions =======================================
+
+def parseOption(message,previousOptionNumber):
+    '''
+    \brief Extract an option from the beginning of a message.
+    
+    \param[in] message              A list of bytes.
+    \param[in] previousOptionNumber The option number from the previous option
+        in the message; set to 0 if this is the first option.
+    
+    \return A tuple with the following elements:
+        - element 0 is the option that was extracted. If no option was found
+          (end of the options or end of the packet), None is returned.
+        - element 1 is the message without the option.
+    '''
+    
+    log.debug(
+        'parseOption message={0} previousOptionNumber={1}'.format(
+            u.formatBuf(message),
+            previousOptionNumber,
+        )
+    )
+    
+    #==== detect end of packet
+    if len(message)==0:
+        message = message[1:]
+        return (None,message)
+    
+    #==== detect payload marker
+    if message[0]==d.COAP_PAYLOAD_MARKER:
+        message = message[1:]
+        return (None,message)
+    
+    #==== parse option
+    
+    # header
+    optionDelta  = (message[0]>>4)&0x0f
+    optionLength = (message[0]>>0)&0x0f
+    message = message[1:]
+    
+    # optionDelta
+    if   optionDelta<=12:
+        pass
+    elif optionDelta==13:
+        if len(message)<1:
+            raise e.messageFormatError('message to short, {0} bytes: not space for 1B optionDelta'.format(len(message)))
+        optionDelta = u.buf2int(messsage[0])+13
+        message = message[1:]
+    elif optionDelta==14:
+        if len(message)<2:
+            raise e.messageFormatError('message to short, {0} bytes: not space for 2B optionDelta'.format(len(message)))
+        optionDelta = u.buf2int(messsage[0:1])+269
+        message = message[2:]
+    else:
+        raise e.messageFormatError('invalid optionDelta={0}'.format(optionDelta))
+    
+    log.debug('optionDelta={0}'.format(optionDelta))
+    
+    # optionLength
+    if   optionLength<=12:
+        pass
+    elif optionLength==13:
+        if len(message)<1:
+            raise e.messageFormatError('message to short, {0} bytes: not space for 1B optionLength'.format(len(message)))
+        optionLength = u.buf2int(messsage[0])+13
+        message = message[1:]
+    elif optionLength==14:
+        if len(message)<2:
+            raise e.messageFormatError('message to short, {0} bytes: not space for 2B optionLength'.format(len(message)))
+        optionLength = u.buf2int(messsage[0:1])+269
+        message = message[2:]
+    else:
+        raise e.messageFormatError('invalid optionLength={0}'.format(optionLength))
+    
+    log.debug('optionLength={0}'.format(optionLength))
+    
+    # optionValue
+    if len(message)<optionLength:
+        raise e.messageFormatError('message to short, {0} bytes: not space for optionValue'.format(len(message)))
+    optionValue = message[:optionLength]
+    message = message[optionLength:]
+    
+    log.debug('optionValue={0}'.format(u.formatBuf(optionValue)))
+    
+    #===== create option
+    optionNumber = previousOptionNumber+optionDelta
+    if optionNumber not in d.OPTION_NUM_ALL:
+        raise e.messageFormatError('invalid option number {0}'.format(optionNumber))
+    
+    if optionNumber==d.OPTION_NUM_URIPATH:
+        option = UriPath(path=''.join([chr(b) for b in optionValue]))
+    else:
+        raise NotImplementedError()
+    
+    return (option,message)

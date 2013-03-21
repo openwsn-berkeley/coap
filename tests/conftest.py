@@ -23,6 +23,7 @@ LOG_MODULES = [
     'conftest',
     'coap',
     'coapUri',
+    'coapOption',
     'ListenerDispatcher',
 ]
 
