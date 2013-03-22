@@ -23,25 +23,27 @@ class coap(object):
     def __init__(self,ipAddress='',udpPort=d.DEFAULT_UDP_PORT,testing=False):
         
         # store params
-        self.ipAddress       = ipAddress
-        self.udpPort         = udpPort
+        self.ipAddress            = ipAddress
+        self.udpPort              = udpPort
         
         # local variables
-        self.name            = 'coap@[{0}]:{1}'.format(self.ipAddress,self.udpPort)
-        self.resourceLock    = threading.Lock()
-        self.tokenizer       = t.coapTokenizer()
-        self.resources       = []
+        self.name                 = 'coap@[{0}]:{1}'.format(self.ipAddress,self.udpPort)
+        self.resourceLock         = threading.Lock()
+        self.tokenizer            = t.coapTokenizer()
+        self.resources            = []
+        self.transmittersLock     = threading.Lock()
+        self.transmitters         = []
         if testing:
-            self.listener    = ListenerDispatcher(
-                ipAddress    = self.ipAddress,
-                udpPort      = self.udpPort,
-                callback     = self._messageNotification,
+            self.listener         = ListenerDispatcher(
+                ipAddress         = self.ipAddress,
+                udpPort           = self.udpPort,
+                callback          = self._receive,
             )
         else:
-            self.listener    = ListenerUdp(
-                ipAddress    = self.ipAddress,
-                udpPort      = self.udpPort,
-                callback     = self._messageNotification,
+            self.listener         = ListenerUdp(
+                ipAddress         = self.ipAddress,
+                udpPort           = self.udpPort,
+                callback          = self._receive,
             )
     
     #======================== public ==========================================
@@ -52,42 +54,38 @@ class coap(object):
     #===== client
     
     def GET(self,uri,confirmable=True,options=[]):
-        
-        (destIp,destPort,uriOptions) = coapUri.uri2options(uri)
-        
-        # add URI options
-        options += uriOptions
-        
-        # determine message type
-        if confirmable:
-            type = d.TYPE_CON
-        else:
-            type = d.TYPE_NON
-        
-        # build message
-        message = m.buildMessage(
-            type             = type,
-            token            = self.tokenizer.getNewToken(destIp,destPort),
-            code             = d.METHOD_GET,
-            messageId        = self.tokenizer.getNewMessageId(destIp,destPort),
-            options          = options,
-        )
-        
-        # send
-        self.listener.sendMessage(
-            destIp           = destIp,
-            destPort         = destPort,
-            msg              = message,
+        self._transmit(
+            uri         = uri,
+            confirmable = confirmable,
+            code        = d.METHOD_GET,
+            options     = options,
         )
     
     def PUT(self,uri,confirmable=True,options=[],payload=None):
-        raise NotImplementedError()
+        self._transmit(
+            uri         = uri,
+            confirmable = confirmable,
+            code        = d.METHOD_PUT,
+            options     = options,
+            payload     = payload
+        )
     
     def POST(self,uri,confirmable=True,options=[],payload=None):
-        raise NotImplementedError()
+        self._transmit(
+            uri         = uri,
+            confirmable = confirmable,
+            code        = d.METHOD_POST,
+            options     = options,
+            payload     = payload
+        )
     
     def DELETE(self,uri,confirmable=True,options=[]):
-        raise NotImplementedError()
+        self._transmit(
+            uri         = uri,
+            confirmable = confirmable,
+            code        = d.METHOD_DELETE,
+            options     = options,
+        )
     
     #===== server
     
@@ -101,7 +99,50 @@ class coap(object):
     
     #======================== private =========================================
     
-    def _messageNotification(self,timestamp,sender,bytes):
+    #===== transmit
+    
+    def _transmit(self,uri,confirmable,code,options=[],payload=None):
+        assert code in d.METHOD_ALL
+        if code in [d.METHOD_GET,d.METHOD_DELETE]:
+            assert payload==None
+        assert type(uri)==str
+        
+        (destIp,destPort,uriOptions) = coapUri.uri2options(uri)
+        
+        with self.transmittersLock:
+            messageId        = self._getMessageID(destIp,destPort)
+            token            = self._getToken(destIp,destPort)
+            newTransmitter   = coapTransmitter(
+                srcIp        = self.ipAddress,    
+                srcPort      = self.udpPort,
+                destIp       = destIp,
+                destPort     = destPort,
+                confirmable  = confirmable,
+                messageId    = messageId,
+                code         = code,
+                token        = token,
+                options      = uriOptions+options,
+                payload      = payload,
+            )
+            self.transmitters.append(newTransmitter)
+        
+        return newTransmitter.transmit()
+    
+    def _getMessageID(self,destIp,destPort):
+        '''
+        \pre transmittersLock is already acquired.
+        '''
+        raise NotImplementedError()
+    
+    def _getToken(self,destIp,destPort):
+        '''
+        \pre transmittersLock is already acquired.
+        '''
+        raise NotImplementedError()
+    
+    #===== receive
+    
+    def _receive(self,timestamp,sender,bytes):
         
         output  = []
         output += ['{0} got message:'.format(self.name)]
@@ -119,18 +160,18 @@ class coap(object):
             return
         
         if   message['type']==d.TYPE_CON:
-            self._handleReceivedCON(timestamp,sender,message)
+            self._receiveCON(timestamp,sender,message)
         elif message['type']==d.TYPE_NON:
-            self._handleReceivedNON(timestamp,sender,message)
+            self._receiveNON(timestamp,sender,message)
         elif message['type']==d.TYPE_ACK:
-            self._handleReceivedACK(timestamp,sender,message)
+            self._receiveACK(timestamp,sender,message)
         elif message['type']==d.TYPE_RST:
-            self._handleReceivedRST(timestamp,sender,message)
+            self._receiveRST(timestamp,sender,message)
     
-    def _handleReceivedCON(self,timestamp,sender,message):
+    def _receiveCON(self,timestamp,sender,message):
         raise NotImplementedError()
     
-    def _handleReceivedNON(self,timestamp,sender,message):
+    def _receiveNON(self,timestamp,sender,message):
         
         (sourceIp,sourcePort) = sender
         
@@ -192,8 +233,8 @@ class coap(object):
             msg              = message,
         )
     
-    def _handleReceivedACK(self,timestamp,sender,message):
+    def _receiveACK(self,timestamp,sender,message):
         raise NotImplementedError()
     
-    def _handleReceivedRST(self,timestamp,sender,message):
+    def _receiveRST(self,timestamp,sender,message):
         raise NotImplementedError()

@@ -3,6 +3,14 @@ COAP_VERSION                           = 1
 COAP_PAYLOAD_MARKER                    = 0xff
 COAP_SCHEME                            = 'coap://'
 
+# Default transmission parameters
+DFLT_ACK_TIMEOUT                       = 2    # in s. 
+DFLT_ACK_RANDOM_FACTOR                 = 1.5  # ACK timeout in [DFLT_ACK_TIMEOUT..DFLT_ACK_TIMEOUT*DFLT_ACK_RANDOM_FACTOR]
+DFLT_MAX_RETRANSMIT                    = 4    # max number of retransmissions for NON
+DFLT_NSTART                            = 1    # max number of simultaneous outstanding interactions to a given server
+DFLT_DEFAULT_LEISURE                   = 5    # in s. For multicast request, pick backoff before responding in [0..Leisure]
+DFLT_EXCHANGE_LIFETIME                 = 248  # lifetime of a message ID
+
 # CoAP Message Types
 TYPE_CON                               = 0
 TYPE_NON                               = 1
