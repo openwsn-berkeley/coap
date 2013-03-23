@@ -10,31 +10,32 @@ import threading
 
 class coapTransmitter(threading.Thread):
     '''
-    \brief A class which takes care of transmitting a data packet.
+    \brief A class which takes care of transmitting a CoAP message.
     
     It handles:
-    - waiting for an app-level reply 
+    - waiting for an app-level reply, and
     - waiting for a transport-level ACK in case of a confirmable messages.
     
-    The thread is ephemeral: it is created for each transmission, and returns
-    when the transmission is completed, or timed out.
+    The thread is ephemeral: it is created for each transmission, and becomes
+    inactive when the transmission is completed, or times out.
     '''
     
+    # states of the finite state machine this class implements
     STATE_INIT                    = 'INIT'
     STATE_TXCON                   = 'TXCON'
     STATE_TXNON                   = 'TXNON'
     STATE_WAITFORACK              = 'WAITFORACK'
-    STATE_WAITFORRESPCON          = 'WAITFORRESPCON'
-    STATE_WAITFORRESPNON          = 'WAITFORRESPNON'
     STATE_WAITFOREXPIRATIONMID    = 'WAITFOREXPIRATIONMID'
+    STATE_WAITFORRESP             = 'WAITFORRESP'
+    STATE_TXACK                   = 'TXACK'
     STATE_ALL = [
         STATE_INIT,
         STATE_TXCON,
         STATE_TXNON,
         STATE_WAITFORACK,
-        STATE_WAITFORRESPCON,
-        STATE_WAITFORRESPNON,
         STATE_WAITFOREXPIRATIONMID,
+        STATE_WAITFORRESP,
+        STATE_TXACK,
     ]
     
     def __init__(self,srcIp,srcPort,destIp,destPort,confirmable,messageId,code,token,options,payload):
@@ -68,7 +69,7 @@ class coapTransmitter(threading.Thread):
             self.destPort,
         )
         
-        # start myself
+        # start the thread's execution
         self.start()
     
     def run():

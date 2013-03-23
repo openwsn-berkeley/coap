@@ -18,6 +18,11 @@ class coapException(Exception):
     def __str__(self):
         return self.reason
 
+#============================ timeout =========================================
+
+class coapTimeout(coapException):
+    pass
+
 #============================ formatting ======================================
 
 class coapMalformattedUri(coapException):
