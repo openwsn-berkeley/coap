@@ -7,6 +7,10 @@ log.setLevel(logging.ERROR)
 log.addHandler(NullHandler())
 
 import threading
+import time
+
+import coapDefines   as d
+import coapException as e
 
 class coapTransmitter(threading.Thread):
     '''
@@ -39,7 +43,41 @@ class coapTransmitter(threading.Thread):
     ]
     
     def __init__(self,srcIp,srcPort,destIp,destPort,confirmable,messageId,code,token,options,payload):
-         
+        '''
+        \brief Initilizer function.
+        
+        This function initializes this instance by recording everything about
+        the CoAP message to be exchange with the remote endpoint. It does not,
+        however, initiate the exchange, which is done by calling the transmit()
+        method.
+        
+        \param[in] srcIp    The IP address of the local endpoint, a string of the
+            form 'aaaa::1'.
+        \param[in] srcport  The UDP port the local endpoint is attached to, an
+            integer between 0x0000 and 0xffff.
+        \param[in] destIp   The IP address of the remote CoAP endpoint, a
+            string of the form 'aaaa::1'.
+        \param[in] destPort The UDP port the remote endpoi is attached to, an
+            integer between 0x0000 and 0xffff.
+        \param[in] confirmable A boolean indicating whether the CoAP request is
+            to be send confirmable (True) or non-confirmable (False).
+        \param[in] messageId The message ID to be used for the CoAP request, an
+            integer. The caller of this function needs to enforce unicity rules
+            for the value passed.
+        \param[in] code     The CoAP method to used in the request. Needs to a
+            value of METHOD_ALL.
+        \param[in] token    The token to be used for this exchange. The caller
+            of this function needs to enforce unicity rules for the value
+            passed.
+        \param[in] options  A list of CoAP options. Each element needs to be
+            an instance of the coapOption class. Note that this class will add
+            appropriate CoAP options to encore the URI and query, if needed.
+        \param[in] payload  The payload to pass in the CoAP request. This needs
+            to be a byte list, i.e. a list of intergers between 0x00 and 0xff.
+            This function does not parse this payload, which is written as-is
+            in the CoAP request.
+        '''
+        
         # store params
         self.srcIp           = srcIp
         self.srcPort         = srcPort
@@ -53,8 +91,24 @@ class coapTransmitter(threading.Thread):
         self.payload         = payload
         
         # local variables
-        self.stateLock       = Lock()
-        self.state           = self.STATE_INIT
+        self.dataLock        = threading.Lock()  # lock access to internal state
+        self.fsmSem          = threading.Lock()  # trigger an FSM iteration
+        self.communicating   = threading.Lock()  # acquired when communication is ongoing
+        self.fsmLock         = threading.Lock()  # busy executing FSM step or changing state
+        self.rxMsgEvent      = threading.Event()
+        self.receivedACK     = None
+        self.receivedResp    = None
+        self.coapResponse    = None
+        self.coapError       = None
+        self.state           = self.STATE_INIT   # current state of the FSM
+        self.maxRetransmit   = d.DFLT_MAX_RETRANSMIT
+        self.numTxCOM        = 0
+        self.fsmAction       = {
+            STATE_INIT:           self._actionINIT,
+            STATE_TXCON:          self._actionTXCON,
+            STATE_TXNON:          self._actionTXNON,
+            STATE_WAITFORACK:     self._actionWAITFORACK,
+        }
         
         # initialize parent
         threading.Thread.__init__(self)
@@ -72,31 +126,106 @@ class coapTransmitter(threading.Thread):
         # start the thread's execution
         self.start()
     
-    def run():
-        raise NotImplementedError()
-    
     #======================== public ==========================================
     
     def transmit(self):
         '''
         \brief Start the interaction with the destination, including waiting
-            for transport-level ACK and app-level response.
-            
-        This function blocks until a response is received.
+            for transport-level ACK (if needed), waiting for an app-level
+            response, and ACKing that (if needed)
         
-        \raise coapTimeoutAck      When no ACK is received in time.
-        \raise coapTimeoutResponse When no response is received.
+        This function blocks until a response is received, or the interaction
+        times out.
         
-        \return The received response.
+        \raise coapTimeout      When either no ACK is received in time (for
+           confirmable requests), or no application-level response is received.
+        
+        \return The received response, already parsed.
         '''
         
-        #==== transmit request
+        # start the thread's execution
+        self.communicating.release()
         
-        # determine message type
-        if confirmable:
-            type = d.TYPE_CON
+        # wait for it to be done
+        self.communicating.acquire()
+        
+        # raise an exception if went wrong, or return response
+        with self.dataLock:
+            if self.coapError:
+                assert not self.coapResponse
+                raise self.coapResponse
+            if self.coapResponse:
+                assert not self.coapError
+                return self.coapResponse
+        
+        raise SystemError('neither an error, nor a response')
+    
+    def getState(self):
+        with self.stateLock:
+            returnVal = self.state
+        return returnVal
+    
+    def receiveMessage(self,timestamp,srcIp,srcPort,message):
+        
+        assert srcIp==self.destIp
+        assert srcPort==self.destPort
+        assert (message['token']==self.token) or (message['messageId']==self.messageId)
+        
+        with self.fsmLock:
+            
+            # store packet
+            with self.dataLock:
+                self.LastRxPacket = (timestamp,srcIp,srcPort,message)
+            
+            # signal reception
+            self.rxMsgEvent.set()
+            
+        raise NotImplementedError()
+    
+    #======================= private ==========================================
+    
+    #===== fsm
+    
+    def run():
+        
+        # wait for transmit() to be called
+        self.communicating.acquire()
+        
+        while self.fsmGoOn:
+            # wait for the FSM to be kicked
+            self.fsmSem.acquire()
+            
+            with self.fsmLock:
+                # call the appropriate action
+                self.fsmAction[self.getState()]()
+                
+                # is interaction done?
+                with self.dataLock:
+                    if self.coapError or self.coapResponse:
+                        self.communicating.release()
+        
+    def _actionINIT(self):
+        
+        # set state according to confirmable
+        if self.confirmable:
+            self._setState(STATE_TXCON)
         else:
-            type = d.TYPE_NON
+            self._setState(STATE_TXNON)
+        
+        # kick FSM
+        self._kickFsm()
+    
+    def _actionTXCON(self):
+        
+        # flag error if max number of CON transmits reached
+        if self.numTxCON>self.maxRetransmit+1:
+            # this is an error case
+            self.coapError   = e.coapTimeout('No ACK received after {0} tries (max {1})'.format(
+                    self.numTxCON,
+                    self.maxRetransmit+1,
+                )
+            )
+            return
         
         # build message
         message = m.buildMessage(
@@ -114,30 +243,157 @@ class coapTransmitter(threading.Thread):
             msg              = message,
         )
         
-        #==== wait for request ACK
+        # increment number of transmitted messages
+        self.numTxCON       += 1
         
-        raise NotImplementedError()
+        # update FSM state
+        self._setState(self.STATE_WAITFORACK)
         
-        #==== wait for response
-        
-        raise NotImplementedError()
-        
-        #==== transmit reponse ACK
-        
-        raise NotImplementedError()
-        
-        #==== arm messageID expiration
-        
-        raise NotImplementedError()
+        # kick FSM
+        self._kickFsm()
     
-    def getState(self):
-        with self.stateLock:
-            returnVal = self.state
-        return returnVal
+    def _action_WAITFORACK(self):
+        
+        startTime   = time.time()
+        ackTimeout  = d.DFLT_ACK_TIMEOUT*random.uniform(1, d.DFLT_ACK_RANDOM_FACTOR)
+        while True:
+            waitTimeLeft = startTime+ackTimeout-time.time()
+            if self.rxMsgEvent.wait(timeout=waitTimeLeft):
+                # I got messafe
+                with self.dataLock:
+                    (timestamp,srcIp,srcPort,message) = self.LastRxPacket
+                if  (
+                        message['type']==d.TYPE_ACK and 
+                        message['messageId']==self.messageId
+                    ):
+                    
+                    # store ACK
+                    with self.dataLock:
+                        self.receivedACK = (timestamp,srcIp,srcPort,message)
+                    
+                    # update FSM state
+                    self._setState(self.STATE_ACKRX)
+                    
+                    # kick FSM
+                    self._kickFsm()
+                    return
+            else:
+                # re-send
+                
+                # update FSM state
+                self._setState(self.STATE_TXCON)
+                
+                # kick FSM
+                self._kickFsm()
+                return
     
-    #======================= private ==========================================
+    def _action_ACKRX(self):
+        with self.dataLock:
+            assert self.receivedACK
+            (timestamp,srcIp,srcPort,message) = self.receivedACK
+        
+        if message['code']==COAP_RC_NONE:
+            # response NOT piggybacked
+            
+            # update FSM state
+            self._setState(self.STATE_WAITFORRESP)
+            
+            # kick FSM
+            self._kickFsm()
+        else:
+            # piggybacked response
+            
+            # successful end of FSM
+            with self.dataLock:
+               self.coapResponse = (timestamp,srcIp,srcPort,message)
     
-    def _changeState(self,newState):
+    def _action_WAITFORESP(self):
+        startTime   = time.time()
+        respTimeout = d.DFLT_RESPONSE_TIMEOUT
+        while True:
+            waitTimeLeft = startTime+respTimeout-time.time()
+            if self.rxMsgEvent.wait(timeout=waitTimeLeft):
+                # I got message
+                with self.dataLock:
+                    (timestamp,srcIp,srcPort,message) = self.LastRxPacket
+                if  (
+                        (
+                            message['type']==d.TYPE_CON or
+                            message['type']==d.TYPE_NON
+                        ) and 
+                        message['token']==self.token
+                    ):
+                    
+                    # store response
+                    with self.dataLock:
+                        self.receivedResp = (timestamp,srcIp,srcPort,message)
+                    
+                    # update FSM state
+                    self._setState(self.STATE_RESPRX)
+                    
+                    # kick FSM
+                    self._kickFsm()
+                    return
+            else:
+                # this is an error case
+                self.coapError   = e.coapTimeout('No Response received after {0}s'.format(
+                        self.respTimeout,
+                    )
+                )
+                return
+    
+    def _action_RESPRX(self):
+        
+        with self.dataLock:
+            (timestamp,srcIp,srcPort,message) = self.receivedResp
+        
+        # decide whether to ACK response
+        if   message['type']==STATE_TXCON:
+            self._setState(STATE_TXACK)
+        elif message['type']==STATE_TXNON:
+            # successful end of FSM
+            with self.dataLock:
+               self.coapResponse = (timestamp,srcIp,srcPort,message)
+        else:
+            raise SystemError('unexpected message type {0}'.format(message['type']))
+        
+        # kick FSM
+        self._kickFsm()
+    
+    def _action_TXACK(self):
+        
+        with self.dataLock:
+            (timestamp,srcIp,srcPort,message) = self.receivedResp
+        
+        # build ACK
+        message = m.buildMessage(
+            type             = d.TYPE_ACK,
+            token            = None,
+            code             = d.COAP_RC_NONE,
+            messageId        = message['messageId'],
+        )
+        
+        # send
+        self.listener.sendMessage(
+            destIp           = message['srcId'],
+            destPort         = message['srcPort'],
+            msg              = message,
+        )
+        
+        # successful end of FSM
+        with self.dataLock:
+           self.coapResponse = (timestamp,srcIp,srcPort,message)
+        
+        # kick FSM
+        self._kickFsm()
+    
+    #===== helpers
+    
+    def _kickFsm(self):
+        self.fsmSem.release()
+    
+    def _setState(self,newState):
         with self.stateLock:
             self.state = newState
         log.debug('{0}: state={0}'.format(self.name,newState))
+    

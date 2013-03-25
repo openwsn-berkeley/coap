@@ -32,7 +32,7 @@ class coap(object):
         self.tokenizer            = t.coapTokenizer()
         self.resources            = []
         self.transmittersLock     = threading.Lock()
-        self.transmitters         = []
+        self.transmitters         = {}
         if testing:
             self.listener         = ListenerDispatcher(
                 ipAddress         = self.ipAddress,
@@ -124,7 +124,9 @@ class coap(object):
                 options      = uriOptions+options,
                 payload      = payload,
             )
-            self.transmitters.append(newTransmitter)
+            key              = (destIp,destPort,token,messageId)
+            assert key not in self.transmitters.keys()
+            self.transmitters[key] = newTransmitter
         
         return newTransmitter.transmit()
     
@@ -141,7 +143,7 @@ class coap(object):
         raise NotImplementedError()
     
     #===== receive
-    
+        
     def _receive(self,timestamp,sender,bytes):
         
         output  = []
@@ -152,12 +154,40 @@ class coap(object):
         output  = '\n'.join(output)
         log.debug(output)
         
+        srcIp   = sender[0]
+        srcPort = sender[1]
+        
         # parse messages
         try:
             message = m.parseMessage(bytes)
         except e.messageFormatError as err:
             log.warning('malformed message {0}: {1}'.format(u.formatBuf(bytes),str(err)))
             return
+        
+        try:
+            msgkey = (srcIp,srcPort,message['token'],message['messageId'])
+            found  = False
+            with self.transmittersLock:
+                for (k,v) in self.transmitters:
+                    # delete dead transmitters
+                    if not v.isAlive():
+                        del self.transmitters[k]
+                    
+                    if (
+                            msgkey[0]==k[0] and
+                            msgkey[1]==k[1] and
+                            (
+                                msgkey[2]==k[2] or
+                                msgkey[3]==k[3]
+                            )
+                        ):
+                        found = True
+                        v.receiveMessage(timestamp,srcIp,srcPort,message)
+                        break
+            if found==False:
+                raise e.coapRcBadRequest()
+        except e.coapRc:
+            raise NotImplementedError()
         
         if   message['type']==d.TYPE_CON:
             self._receiveCON(timestamp,sender,message)

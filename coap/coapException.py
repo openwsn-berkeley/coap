@@ -47,6 +47,8 @@ class coapRc(coapException):
         self.rc          = rc
         self.description = description
 
+#==== success
+
 class coapRcCreated(coapRc):
     def __init__(self):
         coapRc.__init__(self,(2,01))
@@ -66,6 +68,8 @@ class coapRcChanged(coapRc):
 class coapRcContent(coapRc):
     def __init__(self):
         coapRc.__init__(self,(2,05))
+
+#==== client error
 
 class coapRcBadRequest(coapRc):
     def __init__(self):
@@ -106,6 +110,8 @@ class coapRcRequestEntityTooLarge(coapRc):
 class coapRcUnsupportedContentFormat(coapRc):
     def __init__(self):
         coapRc.__init__(self,(4,15))
+
+#===== server error
 
 class coapRcInternalServerError(coapRc):
     def __init__(self):
