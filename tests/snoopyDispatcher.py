@@ -69,20 +69,20 @@ class snoopyDispatcher(threading.Thread):
         
         timestamp  = time.time()
         
+        # log
+        log.debug("{0}:{1}->{2}:{3}: {4}".format(
+                sender[0],
+                sender[1],
+                signal[0],
+                signal[1],
+                u.formatBuf(data),
+            )
+        )
+        
         srcIp      = u.ipv6AddrString2Bytes(sender[0])
         srcPort    = sender[1]
         destIp     = u.ipv6AddrString2Bytes(signal[0])
         destPort   = signal[1]
-        
-        # log
-        log.debug("{0}:{1}->{2}:{3}: {4}".format(
-                srcIp,
-                srcPort,
-                destIp,
-                destPort,
-                u.formatBuf(data),
-            )
-        )
         
         # log in pcap
         self._writePcapMessage(timestamp,srcIp,destIp,srcPort,destPort,data)
@@ -154,3 +154,6 @@ class snoopyDispatcher(threading.Thread):
            [pcapMsgHeader]+[''.join([chr(b) for b in bytesToWrite])]
         )
         self.pcapFile.write(stringToWrite)
+        self.pcapFile.flush()
+        
+        log.debug('written {0} bytes'.format(len(stringToWrite)))

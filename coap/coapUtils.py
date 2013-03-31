@@ -96,5 +96,7 @@ def calcUdpCheckSum(srcIp,destIp,srcPort,destPort,payload):
     pseudoPacket += [0x00,0x00]                   # Checksum
     
     pseudoPacket += payload
+    if len(pseudoPacket)%2==1:
+        pseudoPacket += [0x00]
     
     return checksum(pseudoPacket)

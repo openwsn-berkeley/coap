@@ -47,7 +47,7 @@ def test_startStop(logFixture,snoopyDispatcher):
         time.sleep(0.500)
         assert len(threading.enumerate())==1
     
-def test_socketUdpComunication(logFixture):
+def test_socketUdpComunication(logFixture,snoopyDispatcher):
     
     # start two coap endpoints
     coap1 = coap.coap(ipAddress=IPADDRESS1,testing=True)
@@ -56,15 +56,15 @@ def test_socketUdpComunication(logFixture):
     # send coap1->coap2
     for _ in range(NUMPACKETS):
         coap1.socketUdp.sendUdp(
-            destIp   = IPADDRESS2,
+            destIp   = 'aaaa::3',
             destPort = coapDefines.DEFAULT_UDP_PORT,
-            msg      = [0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88]
+            msg      = [0x51,0x01,0x7d,0x35,0x20,0xbb]+[ord(c) for c in 'temperature']
         )
         time.sleep(0.500)
         coap2.socketUdp.sendUdp(
             destIp   = IPADDRESS1,
             destPort = coapDefines.DEFAULT_UDP_PORT,
-            msg      = [0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88]
+            msg      = [0x41,0x01,0x7d,0x35,0x20,0xbb]+[ord(c) for c in 'temperature']
         )
         time.sleep(0.500)
     

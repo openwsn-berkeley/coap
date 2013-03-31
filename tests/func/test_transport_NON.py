@@ -41,7 +41,7 @@ class dummyResource(coapResource.coapResource):
     
 #============================ tests ===========================================
 
-def test_GET(logFixture):
+def test_GET(logFixture,snoopyDispatcher):
     
     # start two coap endpoints
     coap1 = coap.coap(ipAddress=IPADDRESS1,testing=True)
