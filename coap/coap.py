@@ -114,7 +114,7 @@ class coap(object):
             messageId        = self._getMessageID(destIp,destPort)
             token            = self._getToken(destIp,destPort)
             newTransmitter   = coapTransmitter.coapTransmitter(
-                sendFunc     = self.socketUdp.sendMessage,
+                sendFunc     = self.socketUdp.sendUdp,
                 srcIp        = self.ipAddress,    
                 srcPort      = self.udpPort,
                 destIp       = destIp,

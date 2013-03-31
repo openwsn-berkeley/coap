@@ -39,7 +39,7 @@ class socketUdpDispatcher(socketUdp.socketUdp):
     
     #======================== public ==========================================
     
-    def sendMessage(self,destIp,destPort,msg):
+    def sendUdp(self,destIp,destPort,msg):
         
         # send over dispatcher
         dispatcher.send(
@@ -52,6 +52,7 @@ class socketUdpDispatcher(socketUdp.socketUdp):
         self._incrementTx()
     
     def close(self):
+        
         # disconnect from dispatcher
         dispatcher.disconnect(
             receiver = self._messageNotification,

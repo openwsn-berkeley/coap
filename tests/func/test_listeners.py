@@ -53,7 +53,7 @@ def test_socketUdpComunication(logFixture):
     
     # send coap1->coap2
     for _ in range(30):
-        coap1.socketUdp.sendMessage(
+        coap1.socketUdp.sendUdp(
             destIp   = IPADDRESS2,
             destPort = coapDefines.DEFAULT_UDP_PORT,
             msg      = [0x00,0x01]

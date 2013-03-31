@@ -42,7 +42,7 @@ class socketUdpReal(socketUdp.socketUdp):
     
     #======================== public ==========================================
     
-    def sendMessage(self,destIp,destPort,msg):
+    def sendUdp(self,destIp,destPort,msg):
         
         # convert msg to string
         msg = ''.join([chr(b) for b in msg])

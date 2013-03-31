@@ -30,7 +30,7 @@ class socketUdp(threading.Thread):
     
     #======================== virtual methods =================================
     
-    def sendMessage(self,destIp,destPort,msg):
+    def sendUdp(self,destIp,destPort,msg):
         raise NotImplementedError() # abstract method
     
     def close(self):
