@@ -12,3 +12,5 @@ MANIFEST
 # testing
 *.log
 __pycache__
+
+*.pcap
