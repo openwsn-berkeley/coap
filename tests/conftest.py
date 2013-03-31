@@ -10,7 +10,8 @@ import logging.handlers
 
 import pytest
 
-import testUtils as utils
+import testUtils        as utils
+import snoopyDispatcher as snoopyDis
 
 #============================ logging =========================================
 
@@ -26,9 +27,11 @@ LOG_MODULES = [
     'coapOption',
     'coapResource',
     'coapTransmitter',
+    'coapUtils',
     'socketUdp',
     'socketUdpReal',
     'socketUdpDispatcher',
+    'snoopyDispatcher',
 ]
 
 #============================ fixtures ========================================
@@ -89,3 +92,15 @@ def logFixture(logFixtureModule,request):
     log.debug('\n\n---------- {0}'.format(getTestFunctionName(request)))
     
     return logFixtureModule
+
+#===== snoopyDispatcher
+
+def snoppyTeardown(snoppy):
+    snoppy.close()
+
+@pytest.fixture(scope='module')
+def snoopyDispatcher(request):
+    moduleName = getTestModuleName(request)
+    snoopy = snoopyDis.snoopyDispatcher('{0}.pcap'.format(moduleName))
+    f = lambda : snoppyTeardown(snoopy)
+    request.addfinalizer(f)
