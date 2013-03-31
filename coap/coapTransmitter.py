@@ -239,6 +239,9 @@ class coapTransmitter(threading.Thread):
         
     def _action_INIT(self):
         
+        # log
+        log.debug('_action_INIT()')
+        
         # set state according to confirmable
         if self.confirmable:
             self._setState(self.STATE_TXCON)
@@ -249,6 +252,9 @@ class coapTransmitter(threading.Thread):
         self._kickFsm()
     
     def _action_TXCON(self):
+        
+        # log
+        log.debug('_action_TXCON()')
         
         # flag error if max number of CON transmits reached
         if self.numTxCON>self.maxRetransmit+1:
@@ -287,6 +293,9 @@ class coapTransmitter(threading.Thread):
     
     def _action_TXNON(self):
         
+        # log
+        log.debug('_action_TXNON()')
+        
         # build message
         message = m.buildMessage(
             type             = d.TYPE_NON,
@@ -310,6 +319,9 @@ class coapTransmitter(threading.Thread):
         self._kickFsm()
     
     def _action_WAITFORACK(self):
+        
+        # log
+        log.debug('_action_WAITFORACK()')
         
         startTime   = time.time()
         ackTimeout  = d.DFLT_ACK_TIMEOUT*random.uniform(1, d.DFLT_ACK_RANDOM_FACTOR)
@@ -345,6 +357,10 @@ class coapTransmitter(threading.Thread):
                 return
     
     def _action_ACKRX(self):
+        
+        # log
+        log.debug('_action_ACKRX()')
+        
         with self.dataLock:
             assert self.receivedACK
             (timestamp,srcIp,srcPort,message) = self.receivedACK
@@ -365,9 +381,17 @@ class coapTransmitter(threading.Thread):
                self.coapResponse = (timestamp,srcIp,srcPort,message)
     
     def _action_WAITFOREXPIRATIONMID(self):
+        
+        # log
+        log.debug('_action_WAITFOREXPIRATIONMID()')
+        
         raise NotImplementedError()
     
     def _action_WAITFORRESP(self):
+        
+        # log
+        log.debug('_action_WAITFORRESP()')
+        
         startTime   = time.time()
         respTimeout = d.DFLT_RESPONSE_TIMEOUT
         while True:
@@ -404,6 +428,9 @@ class coapTransmitter(threading.Thread):
     
     def _action_RESPRX(self):
         
+        # log
+        log.debug('_action_RESPRX()')
+        
         with self.dataLock:
             (timestamp,srcIp,srcPort,message) = self.receivedResp
         
@@ -421,6 +448,9 @@ class coapTransmitter(threading.Thread):
         self._kickFsm()
     
     def _action_TXACK(self):
+        
+        # log
+        log.debug('_action_TXACK()')
         
         with self.dataLock:
             (timestamp,srcIp,srcPort,message) = self.receivedResp
