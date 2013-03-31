@@ -2,16 +2,16 @@ import logging
 class NullHandler(logging.Handler):
     def emit(self, record):
         pass
-log = logging.getLogger('ListenerUdp')
+log = logging.getLogger('socketUdpReal')
 log.setLevel(logging.ERROR)
 log.addHandler(NullHandler())
 
 import socket
 import time
 
-import Listener
+import socketUdp
 
-class ListenerUdp(Listener.Listener):
+class socketUdpReal(socketUdp.socketUdp):
 
     BUFSIZE = 1024
     
@@ -21,10 +21,10 @@ class ListenerUdp(Listener.Listener):
         log.debug('creating instance')
         
         # initialize the parent class
-        Listener.Listener.__init__(self,ipAddress,udpPort)
+        socketUdp.socketUdp.__init__(self,ipAddress,udpPort)
         
         # change name
-        self.name       = 'ListenerUdp@{0}:{1}'.format(self.ipAddress,self.udpPort)
+        self.name       = 'socketUdpRead@{0}:{1}'.format(self.ipAddress,self.udpPort)
         
         # local variables
         self.socketLock = threading.Lock()

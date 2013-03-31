@@ -2,13 +2,13 @@ import logging
 class NullHandler(logging.Handler):
     def emit(self, record):
         pass
-log = logging.getLogger('Listener')
+log = logging.getLogger('socketUdp')
 log.setLevel(logging.ERROR)
 log.addHandler(NullHandler())
 
 import threading
 
-class Listener(threading.Thread):
+class socketUdp(threading.Thread):
     
     def __init__(self,ipAddress,udpPort,callback):
         
@@ -26,7 +26,7 @@ class Listener(threading.Thread):
         threading.Thread.__init__(self)
         
         # give this thread a name
-        self.name       = 'Listener'
+        self.name       = 'socketUdp'
     
     #======================== virtual methods =================================
     

@@ -26,7 +26,9 @@ LOG_MODULES = [
     'coapOption',
     'coapResource',
     'coapTransmitter',
-    'ListenerDispatcher',
+    'socketUdp',
+    'socketUdpReal',
+    'socketUdpDispatcher',
 ]
 
 #============================ fixtures ========================================

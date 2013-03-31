@@ -45,7 +45,7 @@ def test_startStop(logFixture):
         time.sleep(0.500)
         assert len(threading.enumerate())==1
     
-def test_listenerComunication(logFixture):
+def test_socketUdpComunication(logFixture):
     
     # start two coap endpoints
     coap1 = coap.coap(ipAddress=IPADDRESS1,testing=True)
@@ -53,18 +53,18 @@ def test_listenerComunication(logFixture):
     
     # send coap1->coap2
     for _ in range(30):
-        coap1.listener.sendMessage(
+        coap1.socketUdp.sendMessage(
             destIp   = IPADDRESS2,
             destPort = coapDefines.DEFAULT_UDP_PORT,
             msg      = [0x00,0x01]
         )
     
     # verify stats
-    assert coap1.listener.getStats()=={
+    assert coap1.socketUdp.getStats()=={
         'numTx': 30,
         'numRx': 0,
     }
-    assert coap2.listener.getStats()=={
+    assert coap2.socketUdp.getStats()=={
         'numTx': 0,
         'numRx': 30,
     }

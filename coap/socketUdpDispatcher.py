@@ -2,7 +2,7 @@ import logging
 class NullHandler(logging.Handler):
     def emit(self, record):
         pass
-log = logging.getLogger('ListenerDispatcher')
+log = logging.getLogger('socketUdpDispatcher')
 log.setLevel(logging.ERROR)
 log.addHandler(NullHandler())
 
@@ -11,10 +11,10 @@ import threading
 
 from pydispatch import dispatcher
 
-import Listener
+import socketUdp
 import coapUtils as u
 
-class ListenerDispatcher(Listener.Listener):
+class socketUdpDispatcher(socketUdp.socketUdp):
     
     def __init__(self,ipAddress,udpPort,callback):
         
@@ -22,10 +22,10 @@ class ListenerDispatcher(Listener.Listener):
         log.debug('creating instance')
         
         # initialize the parent class
-        Listener.Listener.__init__(self,ipAddress,udpPort,callback)
+        socketUdp.socketUdp.__init__(self,ipAddress,udpPort,callback)
         
         # change name
-        self.name       = 'ListenerDispatcher@{0}:{1}'.format(self.ipAddress,self.udpPort)
+        self.name       = 'socketUdpDispatcher@{0}:{1}'.format(self.ipAddress,self.udpPort)
         self.gotMsgSem  = threading.Semaphore()
         
         # connect to dispatcher

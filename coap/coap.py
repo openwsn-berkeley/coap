@@ -16,8 +16,8 @@ import coapResource     as r
 import coapDefines      as d
 import coapUri
 import coapTransmitter
-from ListenerDispatcher import ListenerDispatcher
-from ListenerUdp        import ListenerUdp
+from socketUdpDispatcher import socketUdpDispatcher
+from socketUdpReal       import socketUdpReal
 
 class coap(object):
     
@@ -35,13 +35,13 @@ class coap(object):
         self.transmittersLock     = threading.RLock()
         self.transmitters         = {}
         if testing:
-            self.udpHandler       = ListenerDispatcher(
+            self.socketUdp        = socketUdpDispatcher(
                 ipAddress         = self.ipAddress,
                 udpPort           = self.udpPort,
                 callback          = self._receive,
             )
         else:
-            self.udpHandler       = ListenerUdp(
+            self.socketUdp        = socketUdpReal(
                 ipAddress         = self.ipAddress,
                 udpPort           = self.udpPort,
                 callback          = self._receive,
@@ -50,7 +50,7 @@ class coap(object):
     #======================== public ==========================================
     
     def close(self):
-        self.udpHandler.close()
+        self.socketUdp.close()
     
     #===== client
     
@@ -114,7 +114,7 @@ class coap(object):
             messageId        = self._getMessageID(destIp,destPort)
             token            = self._getToken(destIp,destPort)
             newTransmitter   = coapTransmitter.coapTransmitter(
-                sendFunc     = self.udpHandler.sendMessage,
+                sendFunc     = self.socketUdp.sendMessage,
                 srcIp        = self.ipAddress,    
                 srcPort      = self.udpPort,
                 destIp       = destIp,
