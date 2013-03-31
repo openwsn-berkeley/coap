@@ -62,8 +62,15 @@ class snoopyDispatcher(threading.Thread):
     #======================== private =========================================
     
     def run(self):
-        while self.goOn:
-            self.gotMsgSem.acquire()
+        try:
+            while self.goOn:
+                self.gotMsgSem.acquire()
+        except Exception as err:
+            log.critical(u.formatCrashMessage(
+                    threadName = self.name,
+                    error      = err
+                )
+            )
     
     def _messageNotification(self,signal,sender,data):
         

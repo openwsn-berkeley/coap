@@ -102,8 +102,8 @@ class coapTransmitter(threading.Thread):
         # local variables
         self.dataLock        = threading.Lock()  # lock access to internal state
         self.fsmSem          = threading.Lock()  # trigger an FSM iteration
-        self.communicating   = threading.Lock()  # acquired when communication is ongoing
-        self.fsmLock         = threading.Lock()  # busy executing FSM step or changing state
+        self.startLock       = threading.Lock()  # released to start communicating
+        self.endLock         = threading.Lock()  # released when done communicating
         self.stateLock       = threading.RLock() # busy setting or getting FSM state
         self.rxMsgEvent      = threading.Event()
         self.receivedACK     = None
@@ -140,7 +140,8 @@ class coapTransmitter(threading.Thread):
         )
         
         # by default, I'm not communicating
-        self.communicating.acquire()
+        self.startLock.acquire()
+        self.endLock.acquire()
         
         # start the thread's execution
         self.start()
@@ -166,10 +167,10 @@ class coapTransmitter(threading.Thread):
         log.debug('transmit()')
         
         # start the thread's execution
-        self.communicating.release()
+        self.startLock.release()
         
         # wait for it to be done
-        self.communicating.acquire()
+        self.endLock.acquire()
         
         # raise an exception if went wrong, or return response
         with self.dataLock:
@@ -191,16 +192,15 @@ class coapTransmitter(threading.Thread):
         assert srcPort==self.destPort
         assert (message['token']==self.token) or (message['messageId']==self.messageId)
         
-        with self.fsmLock:
-            
-            # store packet
-            with self.dataLock:
-                self.LastRxPacket = (timestamp,srcIp,srcPort,message)
-            
-            # signal reception
-            self.rxMsgEvent.set()
-            
-        raise NotImplementedError()
+        # log
+        log.debug('receiveMessage timestamp={0} srcIp={1} srcPort={2} message={3}'.format(timestamp,srcIp,srcPort,message))
+        
+        # store packet
+        with self.dataLock:
+            self.LastRxPacket = (timestamp,srcIp,srcPort,message)
+        
+        # signal reception
+        self.rxMsgEvent.set()
     
     #======================= private ==========================================
     
@@ -210,7 +210,7 @@ class coapTransmitter(threading.Thread):
         
         try:
             # wait for transmit() to be called
-            self.communicating.acquire()
+            self.startLock.acquire()
             
             # log
             log.debug('start FSM')
@@ -222,14 +222,14 @@ class coapTransmitter(threading.Thread):
                 # log
                 log.debug('fsm state iteration: {0}'.format(self.getState()))
                 
-                with self.fsmLock:
-                    # call the appropriate action
-                    self.fsmAction[self.getState()]()
-                    
-                    # is interaction done?
-                    with self.dataLock:
-                        if self.coapError or self.coapResponse:
-                            self.communicating.release()
+                # call the appropriate action
+                self.fsmAction[self.getState()]()
+                
+                # is interaction done?
+                with self.dataLock:
+                    if self.coapError or self.coapResponse:
+                        self.endLock.release()
+                        self.fsmGoOn=False
         except Exception as err:
             log.critical(u.formatCrashMessage(
                     threadName = self.name,
@@ -328,7 +328,7 @@ class coapTransmitter(threading.Thread):
         while True:
             waitTimeLeft = startTime+ackTimeout-time.time()
             if self.rxMsgEvent.wait(timeout=waitTimeLeft):
-                # I got messafe
+                # I got message
                 with self.dataLock:
                     (timestamp,srcIp,srcPort,message) = self.LastRxPacket
                 if  (
@@ -378,7 +378,7 @@ class coapTransmitter(threading.Thread):
             
             # successful end of FSM
             with self.dataLock:
-               self.coapResponse = (timestamp,srcIp,srcPort,message)
+               self.coapResponse = message
     
     def _action_WAITFOREXPIRATIONMID(self):
         
@@ -435,12 +435,12 @@ class coapTransmitter(threading.Thread):
             (timestamp,srcIp,srcPort,message) = self.receivedResp
         
         # decide whether to ACK response
-        if   message['type']==STATE_TXCON:
+        if   message['type']==d.TYPE_CON:
             self._setState(STATE_TXACK)
-        elif message['type']==STATE_TXNON:
+        elif message['type']==d.TYPE_NON:
             # successful end of FSM
             with self.dataLock:
-               self.coapResponse = (timestamp,srcIp,srcPort,message)
+               self.coapResponse = message
         else:
             raise SystemError('unexpected message type {0}'.format(message['type']))
         
@@ -472,7 +472,7 @@ class coapTransmitter(threading.Thread):
         
         # successful end of FSM
         with self.dataLock:
-           self.coapResponse = (timestamp,srcIp,srcPort,message)
+           self.coapResponse = message
         
         # kick FSM
         self._kickFsm()

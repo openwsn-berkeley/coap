@@ -5,7 +5,7 @@ import time
 import threading
 
 from coap import coap, \
-                 coapDefines, \
+                 coapDefines as d, \
                  coapResource
 
 #============================ logging ===============================
@@ -37,7 +37,13 @@ class dummyResource(coapResource.coapResource):
     #======================== parent methods ==================================
     
     def GET(self,options=[]):
-        return DUMMYVAL
+        log.debug('dummyResource GET')
+        
+        respCode        = d.COAP_RC_2_05_CONTENT
+        respOptions     = []
+        respPayload     = DUMMYVAL
+        
+        return (respCode,respOptions,respPayload)
     
 #============================ tests ===========================================
 
@@ -55,7 +61,7 @@ def test_GET(logFixture,snoopyDispatcher):
     
     # have coap2 do a get
     reply = coap2.GET(
-        uri         = 'coap://[{0}]:{1}/{2}/'.format(IPADDRESS1,coapDefines.DEFAULT_UDP_PORT,RESOURCE),
+        uri         = 'coap://[{0}]:{1}/{2}/'.format(IPADDRESS1,d.DEFAULT_UDP_PORT,RESOURCE),
         confirmable = False,
     )
     assert reply==DUMMYVAL

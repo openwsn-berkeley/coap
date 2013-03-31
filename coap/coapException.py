@@ -20,6 +20,11 @@ class coapException(Exception):
 
 #============================ timeout =========================================
 
+class coapDelayedResponse(coapException):
+    pass
+
+#============================ timeout =========================================
+
 class coapTimeout(coapException):
     pass
 

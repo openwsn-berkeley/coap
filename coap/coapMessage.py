@@ -90,4 +90,6 @@ def parseMessage(message):
     # payload
     returnVal['payload']     = message
     
+    log.debug('parsed message: {0}'.format(returnVal))
+    
     return returnVal

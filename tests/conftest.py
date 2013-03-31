@@ -25,6 +25,7 @@ LOG_MODULES = [
     'coap',
     'coapUri',
     'coapOption',
+    'coapMessage',
     'coapResource',
     'coapTransmitter',
     'coapUtils',
