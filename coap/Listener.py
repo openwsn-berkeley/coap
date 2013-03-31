@@ -31,10 +31,10 @@ class Listener(threading.Thread):
     #======================== virtual methods =================================
     
     def sendMessage(self,destIp,destPort,msg):
-        raise NotImplementedError()
+        raise NotImplementedError() # abstract method
     
     def close(self):
-        raise NotImplementedError()
+        raise NotImplementedError() # abstract method
     
     def resetStats(self):
         with self.statsLock:
@@ -45,8 +45,7 @@ class Listener(threading.Thread):
     
     def getStats(self):
         with self.statsLock:
-            returnVal = self.stats.copy()
-        return returnVal
+            return self.stats.copy()
     
     #======================== private =========================================
     
