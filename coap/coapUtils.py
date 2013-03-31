@@ -41,3 +41,60 @@ def formatCrashMessage(threadName,error):
     returnVal += ['\n']
     returnVal  = '\n'.join(returnVal)
     return returnVal
+
+#===== header manipulation
+
+def ipv6AddrString2Bytes(string):
+    
+    sidesString    = string.split('::')
+    
+    startString    = sidesString[0].split(':')
+    if len(sidesString)>1:
+        endString  = sidesString[1].split(':')
+    else:
+        endString   = []
+    
+    startBytes      = []
+    for e in startString:
+        startBytes += int2buf(int(e,16),2)
+    endBytes        = []
+    for e in endString:
+        endBytes   += int2buf(int(e,16),2)
+    
+    bytes = startBytes + [0x00]*(16-len(startBytes)-len(endBytes)) + endBytes
+    
+    return bytes
+
+#===== header manipulation
+
+def carry_around_add(a, b):
+    c = a + b
+    return (c & 0xffff) + (c >> 16)
+
+def checksum(byteList):
+    s = 0
+    for i in range(0, len(byteList), 2):
+        w = byteList[i] + (byteList[i+1] << 8)
+        s = carry_around_add(s, w)
+    return ~s & 0xffff
+
+def calcUdpCheckSum(srcIp,destIp,srcPort,destPort,payload):
+        
+    pseudoPacket  = []
+    
+    # IPv6 pseudo-header
+    pseudoPacket += srcIp                         # Source address
+    pseudoPacket += destIp                        # Destination address
+    pseudoPacket += int2buf(8+len(payload),4)     # UDP length
+    pseudoPacket += [0x00]*3                      # Zeros
+    pseudoPacket += [17]                          # next header
+    
+    # UDP pseudo-header
+    pseudoPacket += int2buf(srcPort, 2)           # Source Port
+    pseudoPacket += int2buf(destPort, 2)          # Destination Port
+    pseudoPacket += int2buf(len(payload), 2)      # Length
+    pseudoPacket += [0x00,0x00]                   # Checksum
+    
+    pseudoPacket += payload
+    
+    return checksum(pseudoPacket)
