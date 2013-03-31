@@ -3,10 +3,9 @@ import sys
 here = sys.path[0]
 sys.path.insert(0, os.path.join(here,'..'))
 
-print here
-
 import logging
 import logging.handlers
+import threading
 
 import pytest
 
@@ -71,6 +70,14 @@ def loggingSetup(request):
 
 def loggingTeardown(request):
     moduleName = getTestModuleName(request)
+    
+    # print threads
+    output         = []
+    output        += ['threads:']
+    for t in threading.enumerate():
+        output    += ['- {0}'.format(t.name)]
+    output         = '\n'.join(output)
+    log.debug(output)
     
     # log
     log.debug("\n\n---------- loggingTeardown")
