@@ -11,6 +11,8 @@ import time
 
 import coapDefines   as d
 import coapException as e
+import coapUtils     as u
+import coapMessage   as m
 
 class coapTransmitter(threading.Thread):
     '''
@@ -29,8 +31,10 @@ class coapTransmitter(threading.Thread):
     STATE_TXCON                   = 'TXCON'
     STATE_TXNON                   = 'TXNON'
     STATE_WAITFORACK              = 'WAITFORACK'
+    STATE_ACKRX                   = 'ACKRX'
     STATE_WAITFOREXPIRATIONMID    = 'WAITFOREXPIRATIONMID'
     STATE_WAITFORRESP             = 'WAITFORRESP'
+    STATE_RESPRX                  = 'RESPRX'
     STATE_TXACK                   = 'TXACK'
     STATE_ALL = [
         STATE_INIT,
@@ -42,7 +46,7 @@ class coapTransmitter(threading.Thread):
         STATE_TXACK,
     ]
     
-    def __init__(self,srcIp,srcPort,destIp,destPort,confirmable,messageId,code,token,options,payload):
+    def __init__(self,sendFunc,srcIp,srcPort,destIp,destPort,confirmable,messageId,code,token,options,payload):
         '''
         \brief Initilizer function.
         
@@ -51,6 +55,7 @@ class coapTransmitter(threading.Thread):
         however, initiate the exchange, which is done by calling the transmit()
         method.
         
+        \paran[in] sendFunc The function to call to send a CoAP message.
         \param[in] srcIp    The IP address of the local endpoint, a string of the
             form 'aaaa::1'.
         \param[in] srcport  The UDP port the local endpoint is attached to, an
@@ -78,7 +83,11 @@ class coapTransmitter(threading.Thread):
             in the CoAP request.
         '''
         
+        # log
+        log.debug('creating instance')
+        
         # store params
+        self.sendFunc        = sendFunc
         self.srcIp           = srcIp
         self.srcPort         = srcPort
         self.destIp          = destIp
@@ -95,6 +104,7 @@ class coapTransmitter(threading.Thread):
         self.fsmSem          = threading.Lock()  # trigger an FSM iteration
         self.communicating   = threading.Lock()  # acquired when communication is ongoing
         self.fsmLock         = threading.Lock()  # busy executing FSM step or changing state
+        self.stateLock       = threading.RLock() # busy setting or getting FSM state
         self.rxMsgEvent      = threading.Event()
         self.receivedACK     = None
         self.receivedResp    = None
@@ -103,18 +113,24 @@ class coapTransmitter(threading.Thread):
         self.state           = self.STATE_INIT   # current state of the FSM
         self.maxRetransmit   = d.DFLT_MAX_RETRANSMIT
         self.numTxCOM        = 0
+        self.fsmGoOn         = True
         self.fsmAction       = {
-            STATE_INIT:           self._actionINIT,
-            STATE_TXCON:          self._actionTXCON,
-            STATE_TXNON:          self._actionTXNON,
-            STATE_WAITFORACK:     self._actionWAITFORACK,
+            self.STATE_INIT:                     self._action_INIT,
+            self.STATE_TXCON:                    self._action_TXCON,
+            self.STATE_TXNON:                    self._action_TXNON,
+            self.STATE_WAITFORACK:               self._action_WAITFORACK,
+            self.STATE_ACKRX:                    self._action_ACKRX,
+            self.STATE_WAITFOREXPIRATIONMID:     self._action_WAITFOREXPIRATIONMID,
+            self.STATE_WAITFORRESP:              self._action_WAITFORRESP,
+            self.STATE_RESPRX:                   self._action_RESPRX,
+            self.STATE_TXACK:                    self._action_TXACK,
         }
         
         # initialize parent
         threading.Thread.__init__(self)
         
         # give this thread a name
-        self.name            = '[{0}]:{1}--m{2:x},t{3:x}-->[{2}]:{3}'.format(
+        self.name            = '[{0}]:{1}--m0x{2:x},0x{3:x}-->[{4}]:{5}'.format(
             self.srcIp,
             self.srcPort,
             self.messageId,
@@ -122,6 +138,9 @@ class coapTransmitter(threading.Thread):
             self.destIp,
             self.destPort,
         )
+        
+        # by default, I'm not communicating
+        self.communicating.acquire()
         
         # start the thread's execution
         self.start()
@@ -143,6 +162,9 @@ class coapTransmitter(threading.Thread):
         \return The received response, already parsed.
         '''
         
+        # log
+        log.debug('transmit()')
+        
         # start the thread's execution
         self.communicating.release()
         
@@ -162,11 +184,9 @@ class coapTransmitter(threading.Thread):
     
     def getState(self):
         with self.stateLock:
-            returnVal = self.state
-        return returnVal
+            return self.state
     
     def receiveMessage(self,timestamp,srcIp,srcPort,message):
-        
         assert srcIp==self.destIp
         assert srcPort==self.destPort
         assert (message['token']==self.token) or (message['messageId']==self.messageId)
@@ -186,36 +206,49 @@ class coapTransmitter(threading.Thread):
     
     #===== fsm
     
-    def run():
+    def run(self):
         
-        # wait for transmit() to be called
-        self.communicating.acquire()
-        
-        while self.fsmGoOn:
-            # wait for the FSM to be kicked
-            self.fsmSem.acquire()
+        try:
+            # wait for transmit() to be called
+            self.communicating.acquire()
             
-            with self.fsmLock:
-                # call the appropriate action
-                self.fsmAction[self.getState()]()
+            # log
+            log.debug('start FSM')
+            
+            while self.fsmGoOn:
+                # wait for the FSM to be kicked
+                self.fsmSem.acquire()
                 
-                # is interaction done?
-                with self.dataLock:
-                    if self.coapError or self.coapResponse:
-                        self.communicating.release()
+                # log
+                log.debug('fsm state iteration: {0}'.format(self.getState()))
+                
+                with self.fsmLock:
+                    # call the appropriate action
+                    self.fsmAction[self.getState()]()
+                    
+                    # is interaction done?
+                    with self.dataLock:
+                        if self.coapError or self.coapResponse:
+                            self.communicating.release()
+        except Exception as err:
+            log.critical(u.formatCrashMessage(
+                    threadName = self.name,
+                    error      = err
+                )
+            )
         
-    def _actionINIT(self):
+    def _action_INIT(self):
         
         # set state according to confirmable
         if self.confirmable:
-            self._setState(STATE_TXCON)
+            self._setState(self.STATE_TXCON)
         else:
-            self._setState(STATE_TXNON)
+            self._setState(self.STATE_TXNON)
         
         # kick FSM
         self._kickFsm()
     
-    def _actionTXCON(self):
+    def _action_TXCON(self):
         
         # flag error if max number of CON transmits reached
         if self.numTxCON>self.maxRetransmit+1:
@@ -229,17 +262,17 @@ class coapTransmitter(threading.Thread):
         
         # build message
         message = m.buildMessage(
-            type             = type,
-            token            = self.tokenizer.getNewToken(destIp,destPort),
-            code             = code,
-            messageId        = self.tokenizer.getNewMessageId(destIp,destPort),
-            options          = options,
+            type             = d.TYPE_CON,
+            token            = self.token,
+            code             = self.code,
+            messageId        = self.messageId,
+            options          = self.options,
         )
         
         # send
-        self.listener.sendMessage(
-            destIp           = destIp,
-            destPort         = destPort,
+        self.sendFunc(
+            destIp           = self.destIp,
+            destPort         = self.destPort,
             msg              = message,
         )
         
@@ -248,6 +281,30 @@ class coapTransmitter(threading.Thread):
         
         # update FSM state
         self._setState(self.STATE_WAITFORACK)
+        
+        # kick FSM
+        self._kickFsm()
+    
+    def _action_TXNON(self):
+        
+        # build message
+        message = m.buildMessage(
+            type             = d.TYPE_NON,
+            token            = self.token,
+            code             = self.code,
+            messageId        = self.messageId,
+            options          = self.options,
+        )
+        
+        # send
+        self.sendFunc(
+            destIp           = self.destIp,
+            destPort         = self.destPort,
+            msg              = message,
+        )
+        
+        # update FSM state
+        self._setState(self.STATE_WAITFORRESP)
         
         # kick FSM
         self._kickFsm()
@@ -307,7 +364,10 @@ class coapTransmitter(threading.Thread):
             with self.dataLock:
                self.coapResponse = (timestamp,srcIp,srcPort,message)
     
-    def _action_WAITFORESP(self):
+    def _action_WAITFOREXPIRATIONMID(self):
+        raise NotImplementedError()
+    
+    def _action_WAITFORRESP(self):
         startTime   = time.time()
         respTimeout = d.DFLT_RESPONSE_TIMEOUT
         while True:
@@ -374,7 +434,7 @@ class coapTransmitter(threading.Thread):
         )
         
         # send
-        self.listener.sendMessage(
+        self.sendFunc(
             destIp           = message['srcId'],
             destPort         = message['srcPort'],
             msg              = message,
@@ -395,5 +455,5 @@ class coapTransmitter(threading.Thread):
     def _setState(self,newState):
         with self.stateLock:
             self.state = newState
-        log.debug('{0}: state={0}'.format(self.name,newState))
+        log.debug('{0}: state={1}'.format(self.name,newState))
     

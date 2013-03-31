@@ -15,6 +15,7 @@ import coapException    as e
 import coapResource     as r
 import coapDefines      as d
 import coapUri
+import coapTransmitter
 from ListenerDispatcher import ListenerDispatcher
 from ListenerUdp        import ListenerUdp
 
@@ -31,16 +32,16 @@ class coap(object):
         self.resourceLock         = threading.Lock()
         self.tokenizer            = t.coapTokenizer()
         self.resources            = []
-        self.transmittersLock     = threading.Lock()
+        self.transmittersLock     = threading.RLock()
         self.transmitters         = {}
         if testing:
-            self.listener         = ListenerDispatcher(
+            self.udpHandler       = ListenerDispatcher(
                 ipAddress         = self.ipAddress,
                 udpPort           = self.udpPort,
                 callback          = self._receive,
             )
         else:
-            self.listener         = ListenerUdp(
+            self.udpHandler       = ListenerUdp(
                 ipAddress         = self.ipAddress,
                 udpPort           = self.udpPort,
                 callback          = self._receive,
@@ -49,11 +50,12 @@ class coap(object):
     #======================== public ==========================================
     
     def close(self):
-        self.listener.close()
+        self.udpHandler.close()
     
     #===== client
     
     def GET(self,uri,confirmable=True,options=[]):
+        log.debug('GET {0}'.format(uri))
         self._transmit(
             uri         = uri,
             confirmable = confirmable,
@@ -108,11 +110,11 @@ class coap(object):
         assert type(uri)==str
         
         (destIp,destPort,uriOptions) = coapUri.uri2options(uri)
-        
         with self.transmittersLock:
             messageId        = self._getMessageID(destIp,destPort)
             token            = self._getToken(destIp,destPort)
-            newTransmitter   = coapTransmitter(
+            newTransmitter   = coapTransmitter.coapTransmitter(
+                sendFunc     = self.udpHandler.sendMessage,
                 srcIp        = self.ipAddress,    
                 srcPort      = self.udpPort,
                 destIp       = destIp,
@@ -134,17 +136,22 @@ class coap(object):
         '''
         \pre transmittersLock is already acquired.
         '''
-        raise NotImplementedError()
+        with self.transmittersLock:
+            return 0x1234 # TODO
+            raise NotImplementedError()
     
     def _getToken(self,destIp,destPort):
         '''
         \pre transmittersLock is already acquired.
         '''
-        raise NotImplementedError()
+        with self.transmittersLock:
+            return 0xab # TODO
+            raise NotImplementedError()
     
     #===== receive
         
     def _receive(self,timestamp,sender,bytes):
+        # all UDP packets are received here
         
         output  = []
         output += ['{0} got message:'.format(self.name)]
@@ -164,107 +171,75 @@ class coap(object):
             log.warning('malformed message {0}: {1}'.format(u.formatBuf(bytes),str(err)))
             return
         
+        # dispatch message
         try:
-            msgkey = (srcIp,srcPort,message['token'],message['messageId'])
-            found  = False
-            with self.transmittersLock:
-                for (k,v) in self.transmitters:
-                    # delete dead transmitters
-                    if not v.isAlive():
-                        del self.transmitters[k]
-                    
-                    if (
-                            msgkey[0]==k[0] and
-                            msgkey[1]==k[1] and
-                            (
-                                msgkey[2]==k[2] or
-                                msgkey[3]==k[3]
-                            )
-                        ):
-                        found = True
-                        v.receiveMessage(timestamp,srcIp,srcPort,message)
-                        break
-            if found==False:
-                raise e.coapRcBadRequest()
-        except e.coapRc:
-            raise NotImplementedError()
-        
-        if   message['type']==d.TYPE_CON:
-            self._receiveCON(timestamp,sender,message)
-        elif message['type']==d.TYPE_NON:
-            self._receiveNON(timestamp,sender,message)
-        elif message['type']==d.TYPE_ACK:
-            self._receiveACK(timestamp,sender,message)
-        elif message['type']==d.TYPE_RST:
-            self._receiveRST(timestamp,sender,message)
-    
-    def _receiveCON(self,timestamp,sender,message):
-        raise NotImplementedError()
-    
-    def _receiveNON(self,timestamp,sender,message):
-        
-        (sourceIp,sourcePort) = sender
-        
-        # retrieve path
-        path = coapUri.options2path(message['options'])
-        log.debug('path="{0}"'.format(path))
-        
-        # find resource that matches this path
-        resource = None
-        with self.resourceLock:
-            for r in self.resources:
-                if r.matchesPath(path):
-                    resource = r
-                    break
-        log.debug('resource={0}'.format(resource))
-        
-        if resource:
-            try:
+            if   message['code'] in d.METHOD_ALL:
+                # this is meant for a resource
+                
+                # retrieve path
+                path = coapUri.options2path(message['options'])
+                log.debug('path="{0}"'.format(path))
+                
+                # find resource that matches this path
+                resource = None
+                with self.resourceLock:
+                    for r in self.resources:
+                        if r.matchesPath(path):
+                            resource = r
+                            break
+                log.debug('resource={0}'.format(resource))
+                
+                # call the right resource's method
                 if   message['code']==d.METHOD_GET:
-                    returnVal = resource.GET(options=message['options'])
+                    returnVal = resource.GET(
+                        options=message['options']
+                    )
                 elif message['code']==d.METHOD_POST:
-                    returnVal = resource.GET(options=message['options'],payload=message['payload'])
+                    returnVal = resource.POST(
+                        options=message['options'],
+                        payload=message['payload']
+                    )
                 elif message['code']==d.METHOD_PUT:
-                    returnVal = resource.PUT(options=message['options'],payload=message['payload'])
+                    returnVal = resource.PUT(
+                        options=message['options'],
+                        payload=message['payload']
+                    )
                 elif message['code']==d.METHOD_DELETE:
-                    returnVal = resource.DELETE(options=message['options'])
+                    returnVal = resource.DELETE(
+                        options=message['options']
+                    )
                 else:
                     raise SystemError('unexpected code {0}'.format(message['code']))
-            except e.coapRcMethodNotAllowed:
-                # build message (MethodNotAllowed)
-                message = m.buildMessage(
-                    type          = d.TYPE_ACK,
-                    token         = message['token'],
-                    code          = d.COAP_RC_4_05_METHODNOTALLOWED,
-                    messageId     = message['messageId'],
-                )
-        else:
-            # build message (NotFound)
-            message = m.buildMessage(
-                type              = d.TYPE_ACK,
-                token             = message['token'],
-                code              = d.COAP_RC_4_04_NOTFOUND,
-                messageId         = message['messageId'],
-            )
+            
+            elif message['code'] in d.COAP_RC_ALL:
+                # this is meant for a transmitter
+                
+                # find transmitter
+                msgkey = (srcIp,srcPort,message['token'],message['messageId'])
+                found  = False
+                with self.transmittersLock:
+                    for (k,v) in self.transmitters:
+                        if v.isAlive():
+                            # try matching
+                            if (
+                                    msgkey[0]==k[0] and
+                                    msgkey[1]==k[1] and
+                                    (
+                                        msgkey[2]==k[2] or
+                                        msgkey[3]==k[3]
+                                    )
+                                ):
+                                found = True
+                                v.receiveMessage(timestamp,srcIp,srcPort,message)
+                                break
+                        else:
+                            # delete transmitter
+                            del self.transmitters[k]
+                if found==False:
+                    raise e.coapRcBadRequest()
         
-        # build message (success)
-        message = m.buildMessage(
-            type                  = d.TYPE_ACK,
-            token                 = message['token'],
-            code                  = d.COAP_RC_2_05_CONTENT,
-            messageId             = message['messageId'],
-            payload               = returnVal
-        )
+            else:
+                raise NotImplementedError()
         
-        # send
-        self.listener.sendMessage(
-            destIp           = sourceIp,
-            destPort         = sourcePort,
-            msg              = message,
-        )
-    
-    def _receiveACK(self,timestamp,sender,message):
-        raise NotImplementedError()
-    
-    def _receiveRST(self,timestamp,sender,message):
-        raise NotImplementedError()
+        except e.coapRc:
+            raise NotImplementedError()

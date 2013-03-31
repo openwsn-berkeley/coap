@@ -6,6 +6,8 @@ log = logging.getLogger('coapUtils')
 log.setLevel(logging.ERROR)
 log.addHandler(NullHandler())
 
+import traceback
+
 #===== converting
 
 def int2buf(val,len):
@@ -27,3 +29,15 @@ def formatBuf(buf):
         len(buf),
         '-'.join(['%02x'%b for b in buf])
     )
+
+def formatCrashMessage(threadName,error):
+    returnVal  = []
+    returnVal += ['\n']
+    returnVal += ['======= crash in {0} ======='.format(threadName)]
+    returnVal += ['Error:']
+    returnVal += [str(error)]
+    returnVal += ['\ncall stack:\n']
+    returnVal += [traceback.format_exc()]
+    returnVal += ['\n']
+    returnVal  = '\n'.join(returnVal)
+    return returnVal
