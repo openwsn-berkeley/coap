@@ -208,26 +208,32 @@ class coap(object):
                 #==== get a response
                 
                 # call the right resource's method
-                if   message['code']==d.METHOD_GET:
-                    (respCode,respOptions,respPayload) = resource.GET(
-                        options=message['options']
-                    )
-                elif message['code']==d.METHOD_POST:
-                    (respCode,respOptions,respPayload) = resource.POST(
-                        options=message['options'],
-                        payload=message['payload']
-                    )
-                elif message['code']==d.METHOD_PUT:
-                    (respCode,respOptions,respPayload) = resource.PUT(
-                        options=message['options'],
-                        payload=message['payload']
-                    )
-                elif message['code']==d.METHOD_DELETE:
-                    (respCode,respOptions,respPayload) = resource.DELETE(
-                        options=message['options']
-                    )
-                else:
-                    raise SystemError('unexpected code {0}'.format(message['code']))
+                try:
+                    if   message['code']==d.METHOD_GET:
+                        (respCode,respOptions,respPayload) = resource.GET(
+                            options=message['options']
+                        )
+                    elif message['code']==d.METHOD_POST:
+                        (respCode,respOptions,respPayload) = resource.POST(
+                            options=message['options'],
+                            payload=message['payload']
+                        )
+                    elif message['code']==d.METHOD_PUT:
+                        (respCode,respOptions,respPayload) = resource.PUT(
+                            options=message['options'],
+                            payload=message['payload']
+                        )
+                    elif message['code']==d.METHOD_DELETE:
+                        (respCode,respOptions,respPayload) = resource.DELETE(
+                            options=message['options']
+                        )
+                    else:
+                        raise SystemError('unexpected code {0}'.format(message['code']))
+                except Exception as err:
+                    if isinstance(err,e.coapRc):
+                        raise
+                    else:
+                        raise e.coapRcInternalServerError()
                 
                 #==== send back response
                 
