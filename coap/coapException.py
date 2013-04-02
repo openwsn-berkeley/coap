@@ -57,8 +57,12 @@ class coapRcFactory(object):
         for coapRcClass in coapRcClasses:
             if coapRcClass.rc==rc:
                 return coapRcClass()
-        raise ValueError('No coapRc class with rc={0}'.format(rc))
-        
+        return coapRcUnknown(rc)
+
+class coapRcUnknown(coapRc):
+    def __init__(self,rc):
+        self.rc = rc
+
 #==== success
 
 class coapRcCreated(coapRc):

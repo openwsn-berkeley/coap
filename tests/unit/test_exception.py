@@ -43,8 +43,16 @@ def rcValAndRcClass(request):
 
 #============================ tests =================================
 
-def test_factory_successfull(logFixture,rcValAndRcClass):
+def test_factory_successful(logFixture,rcValAndRcClass):
     
     (rcVal,rcClass) = rcValAndRcClass
     
     assert isinstance(e.coapRcFactory(rcVal),rcClass)
+
+def test_factory_unknown(logFixture):
+    
+    rc = e.coapRcFactory(1000)
+    assert isinstance(rc,e.coapRcUnknown)
+    assert rc.rc==1000
+    
+    
