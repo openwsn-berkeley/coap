@@ -10,7 +10,7 @@ DFLT_MAX_RETRANSMIT                    = 4    # max number of retransmissions fo
 DFLT_NSTART                            = 1    # max number of simultaneous outstanding interactions to a given server
 DFLT_DEFAULT_LEISURE                   = 5    # in s. For multicast request, pick backoff before responding in [0..Leisure]
 DFLT_EXCHANGE_LIFETIME                 = 248  # lifetime of a message ID
-DFLT_RESPONSE_TIMEOUT                  = 60   # delay between CON-ACK and response
+DFLT_RESPONSE_TIMEOUT                  = 60   # delay for app-level response
 
 # CoAP Message Types
 TYPE_CON                               = 0

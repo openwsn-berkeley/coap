@@ -47,7 +47,7 @@ class coapTransmitter(threading.Thread):
         STATE_TXACK,
     ]
     
-    def __init__(self,sendFunc,srcIp,srcPort,destIp,destPort,confirmable,messageId,code,token,options,payload):
+    def __init__(self,sendFunc,srcIp,srcPort,destIp,destPort,confirmable,messageId,code,token,options,payload,respTimeout):
         '''
         \brief Initilizer function.
         
@@ -82,6 +82,7 @@ class coapTransmitter(threading.Thread):
             to be a byte list, i.e. a list of intergers between 0x00 and 0xff.
             This function does not parse this payload, which is written as-is
             in the CoAP request.
+        \param[in] respTimeout The app-level response timeout.
         '''
         
         # log
@@ -114,6 +115,7 @@ class coapTransmitter(threading.Thread):
         self.state           = self.STATE_INIT   # current state of the FSM
         self.maxRetransmit   = d.DFLT_MAX_RETRANSMIT
         self.numTxCON        = 0
+        self.respTimeout     = respTimeout
         self.fsmGoOn         = True
         self.fsmAction       = {
             self.STATE_INIT:                     self._action_INIT,
@@ -402,9 +404,8 @@ class coapTransmitter(threading.Thread):
         log.debug('_action_WAITFORRESP()')
         
         startTime   = time.time()
-        respTimeout = d.DFLT_RESPONSE_TIMEOUT
         while True:
-            waitTimeLeft = startTime+respTimeout-time.time()
+            waitTimeLeft = startTime+self.respTimeout-time.time()
             if self.rxMsgEvent.wait(timeout=waitTimeLeft):
                 # I got message
                 with self.dataLock:

@@ -34,6 +34,7 @@ class coap(object):
         self.resources            = []
         self.transmittersLock     = threading.RLock()
         self.transmitters         = {}
+        self.respTimeout          = d.DFLT_RESPONSE_TIMEOUT
         if testing:
             self.socketUdp        = socketUdpDispatcher(
                 ipAddress         = self.ipAddress,
@@ -128,6 +129,7 @@ class coap(object):
                 token        = token,
                 options      = uriOptions+options,
                 payload      = payload,
+                respTimeout  = self.respTimeout,
             )
             key              = (destIp,destPort,token,messageId)
             assert key not in self.transmitters.keys()
