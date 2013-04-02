@@ -6,11 +6,15 @@ sys.path.insert(0, os.path.join(here,'..'))
 import logging
 import logging.handlers
 import threading
+import time
 
 import pytest
 
 import testUtils        as utils
 import snoopyDispatcher as snoopyDis
+from coap import coap, \
+                 coapDefines as d, \
+                 coapResource
 
 #============================ logging =========================================
 
@@ -33,6 +37,12 @@ LOG_MODULES = [
     'socketUdpDispatcher',
     'snoopyDispatcher',
 ]
+
+IPADDRESS1 = 'aaaa::1'
+IPADDRESS2 = 'aaaa::2'
+
+RESOURCE   = 'res'
+DUMMYVAL   = [0x00,0x01,0x02]
 
 #============================ fixtures ========================================
 
@@ -112,3 +122,54 @@ def snoopyDispatcher(request):
     snoopy = snoopyDis.snoopyDispatcher('{0}.pcap'.format(moduleName))
     f = lambda : snoppyTeardown(snoopy)
     request.addfinalizer(f)
+
+#===== twoEndPoints
+
+class dummyResource(coapResource.coapResource):
+    
+    def __init__(self):
+        # initialize parent class
+        coapResource.coapResource.__init__(
+            self,
+            path = RESOURCE,
+        )
+    
+    #======================== parent methods ==================================
+    
+    def GET(self,options=[]):
+        log.debug('dummyResource GET')
+        
+        respCode        = d.COAP_RC_2_05_CONTENT
+        respOptions     = []
+        respPayload     = DUMMYVAL
+        
+        time.sleep(0.500)
+        
+        return (respCode,respOptions,respPayload)
+
+def twoEndPointsTeardown(coap1,coap2):
+    coap1.close()
+    coap2.close()
+    
+    time.sleep(0.500)
+    assert len(threading.enumerate())==1
+
+@pytest.fixture(scope='module')
+def twoEndPoints(request):
+    
+    # start two coap endpoints
+    coap1 = coap.coap(ipAddress=IPADDRESS1,testing=True)
+    coap2 = coap.coap(ipAddress=IPADDRESS2,testing=True)
+    
+    # create new resource
+    newResource = dummyResource()
+    
+    # install resource on coap1
+    coap1.addResource(newResource)
+    
+    f = lambda : twoEndPointsTeardown(coap1,coap2)
+    request.addfinalizer(f)
+    
+    return (coap1,coap2)
+
+    
