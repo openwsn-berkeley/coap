@@ -177,7 +177,7 @@ class coapTransmitter(threading.Thread):
         with self.dataLock:
             if self.coapError:
                 assert not self.coapResponse
-                raise self.coapResponse
+                raise self.coapError
             if self.coapResponse:
                 assert not self.coapError
                 return self.coapResponse
@@ -195,6 +195,10 @@ class coapTransmitter(threading.Thread):
         
         # log
         log.debug('receiveMessage timestamp={0} srcIp={1} srcPort={2} message={3}'.format(timestamp,srcIp,srcPort,message))
+        
+        # turn message into exception if needed
+        if message['code'] not in d.METHOD_ALL+d.COAP_RC_ALL_SUCCESS:
+            message = e.coapRcFactory(message['code'])
         
         # store packet
         with self.dataLock:
@@ -332,7 +336,11 @@ class coapTransmitter(threading.Thread):
                 # I got message
                 with self.dataLock:
                     (timestamp,srcIp,srcPort,message) = self.LastRxPacket
-                if  (
+                if isinstance(message,e.coapRc):
+                    with self.dataLock:
+                        self.coapError = message
+                    return
+                elif (
                         message['type']==d.TYPE_ACK and 
                         message['messageId']==self.messageId
                     ):
@@ -401,7 +409,11 @@ class coapTransmitter(threading.Thread):
                 # I got message
                 with self.dataLock:
                     (timestamp,srcIp,srcPort,message) = self.LastRxPacket
-                if  (
+                if isinstance(message,e.coapRc):
+                    with self.dataLock:
+                        self.coapError = message
+                    return
+                elif (
                         (
                             message['type']==d.TYPE_CON or
                             message['type']==d.TYPE_NON

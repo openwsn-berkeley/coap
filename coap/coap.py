@@ -200,6 +200,9 @@ class coap(object):
                             break
                 log.debug('resource={0}'.format(resource))
                 
+                if not resource:
+                    raise e.coapRcNotFound()
+                
                 #==== get a response
                 
                 # call the right resource's method
@@ -274,9 +277,30 @@ class coap(object):
                             break
                 if found==False:
                     raise e.coapRcBadRequest()
-        
+            
             else:
                 raise NotImplementedError()
         
-        except e.coapRc:
-            raise NotImplementedError()
+        except e.coapRc as err:
+            # determine type of response packet
+            if   message['type']==d.TYPE_CON:
+                responseType = d.TYPE_ACK
+            elif message['type']==d.TYPE_NON:
+                responseType = d.TYPE_NON
+            else:
+                raise SystemError('unexpected type {0}'.format(message['type']))
+            
+            # build response packets
+            response = m.buildMessage(
+                type             = responseType,
+                token            = message['token'],
+                code             = err.rc,
+                messageId        = message['messageId'],
+            )
+            
+            # send
+            self.socketUdp.sendUdp(
+                destIp           = srcIp,
+                destPort         = srcPort,
+                msg              = response,
+            )
