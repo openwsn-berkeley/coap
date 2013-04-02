@@ -172,4 +172,13 @@ def twoEndPoints(request):
     
     return (coap1,coap2)
 
-    
+#===== confirmableFixture
+
+CONFIRMABLEFIXTURE = [
+   True,
+   False,
+]
+
+@pytest.fixture(params=CONFIRMABLEFIXTURE)
+def confirmableFixture(request):
+    return request.param

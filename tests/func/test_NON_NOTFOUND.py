@@ -22,7 +22,7 @@ RESOURCE_INVALID = 'invalid'
 
 #============================ tests ===========================================
 
-def test_NON(logFixture,snoopyDispatcher,twoEndPoints):
+def test_NOTFOUND(logFixture,snoopyDispatcher,twoEndPoints,confirmableFixture):
     
     (coap1,coap2) = twoEndPoints
     
@@ -30,17 +30,5 @@ def test_NON(logFixture,snoopyDispatcher,twoEndPoints):
     with pytest.raises(e.coapRcNotFound):
         reply = coap2.GET(
             uri         = 'coap://[{0}]:{1}/{2}/'.format(IPADDRESS1,d.DEFAULT_UDP_PORT,RESOURCE_INVALID),
-            confirmable = False,
+            confirmable = confirmableFixture,
         )
-
-def test_CON(logFixture,snoopyDispatcher,twoEndPoints):
-    
-    (coap1,coap2) = twoEndPoints
-    
-    # have coap2 do a get
-    with pytest.raises(e.coapRcNotFound):
-        reply = coap2.GET(
-            uri         = 'coap://[{0}]:{1}/{2}/'.format(IPADDRESS1,d.DEFAULT_UDP_PORT,RESOURCE_INVALID),
-            confirmable = True,
-        )
-    
