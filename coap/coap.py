@@ -7,6 +7,7 @@ log.setLevel(logging.ERROR)
 log.addHandler(NullHandler())
 
 import threading
+import random
 
 import coapTokenizer    as t
 import coapUtils        as u
@@ -143,7 +144,17 @@ class coap(object):
         '''
         with self.transmittersLock:
             self._cleanupTransmitter()
-            return 0x1234 # TODO
+            found = False
+            while not found:
+                messageId = random.randint(0x0000,0xffff)
+                alreadyUsed = False
+                for (kIp,kPort,kToken,kMessageId) in self.transmitters.keys():
+                    if destIp==kIp and destPort==kPort and messageId==kMessageId:
+                        alreadyUsed = True
+                        break
+                if not alreadyUsed:
+                    found = True
+            return messageId
     
     def _getToken(self,destIp,destPort):
         '''
@@ -151,7 +162,17 @@ class coap(object):
         '''
         with self.transmittersLock:
             self._cleanupTransmitter()
-            return 0xab # TODO
+            found = False
+            while not found:
+                token = random.randint(0x00,0xff)
+                alreadyUsed = False
+                for (kIp,kPort,kToken,kMessageId) in self.transmitters.keys():
+                    if destIp==kIp and destPort==kPort and token==kToken:
+                        alreadyUsed = True
+                        break
+                if not alreadyUsed:
+                    found = True
+            return token
     
     def _cleanupTransmitter(self):
         with self.transmittersLock:
