@@ -6,6 +6,8 @@ log = logging.getLogger('coapException')
 log.setLevel(logging.ERROR)
 log.addHandler(NullHandler())
 
+import coapDefines as d
+
 class coapException(Exception):
     
     def __init__(self,reason=''):
@@ -39,105 +41,89 @@ class messageFormatError(coapException):
 #============================ return codes ====================================
 
 class coapRc(coapException):
-    
-    def __init__(self,rc,description=None):
-        assert isinstance(rc,tuple)==tuple
-        assert len(rc)==2
-        for i in range(2):
-           assert type(rc(i))==int
-        if description:
-           assert type(description)==str
-        
-        # store params
-        self.rc          = rc
-        self.description = description
+    rc=None
+    def __init__(self):
+        assert self.rc
 
+class coapRcFactory(object):
+    def __new__(klass,rc):
+        coapRcClasses = []
+        for (i,j) in globals().iteritems():
+            try:
+                if issubclass(j,coapRc):
+                    coapRcClasses.append(j)
+            except TypeError:
+                pass
+        for coapRcClass in coapRcClasses:
+            if coapRcClass.rc==rc:
+                return coapRcClass()
+        raise ValueError('No coapRc class with rc={0}'.format(rc))
+        
 #==== success
 
 class coapRcCreated(coapRc):
-    def __init__(self):
-        coapRc.__init__(self,(2,01))
+    rc = d.COAP_RC_2_01_CREATED
 
 class coapRcDeleted(coapRc):
-    def __init__(self):
-        coapRc.__init__(self,(2,02))
+    rc = d.COAP_RC_2_02_DELETED
 
 class coapRcValid(coapRc):
-    def __init__(self):
-        coapRc.__init__(self,(2,03))
+    rc = d.COAP_RC_2_03_VALID
 
 class coapRcChanged(coapRc):
-    def __init__(self):
-        coapRc.__init__(self,(2,04))
+    rc = d.COAP_RC_2_04_CHANGED
 
 class coapRcContent(coapRc):
-    def __init__(self):
-        coapRc.__init__(self,(2,05))
+    rc = d.COAP_RC_2_05_CONTENT
 
 #==== client error
 
 class coapRcBadRequest(coapRc):
-    def __init__(self):
-        coapRc.__init__(self,(4,00))
+    rc = d.COAP_RC_4_00_BADREQUEST
 
 class coapRcUnauthorized(coapRc):
-    def __init__(self):
-        coapRc.__init__(self,(4,01))
+    rc = d.COAP_RC_4_01_UNAUTHORIZED
 
 class coapRcBadOption(coapRc):
-    def __init__(self):
-        coapRc.__init__(self,(4,02))
+    rc = d.COAP_RC_4_02_BADOPTION
 
 class coapRcForbidden(coapRc):
-    def __init__(self):
-        coapRc.__init__(self,(4,03))
+    rc = d.COAP_RC_4_03_FORBIDDEN
 
 class coapRcNotFound(coapRc):
-    def __init__(self):
-        coapRc.__init__(self,(4,04))
+    rc = d.COAP_RC_4_04_NOTFOUND
 
 class coapRcMethodNotAllowed(coapRc):
-    def __init__(self):
-        coapRc.__init__(self,(4,05))
+    rc = d.COAP_RC_4_05_METHODNOTALLOWED
 
 class coapRcMethodNotAcceptable(coapRc):
-    def __init__(self):
-        coapRc.__init__(self,(4,06))
+    rc = d.COAP_RC_4_06_NOTACCEPTABLE
 
 class coapRcPreconditionFailed(coapRc):
-    def __init__(self):
-        coapRc.__init__(self,(4,12))
+    rc = d.COAP_RC_4_12_PRECONDITIONFAILED
 
 class coapRcRequestEntityTooLarge(coapRc):
-    def __init__(self):
-        coapRc.__init__(self,(4,13))
+    rc = d.COAP_RC_4_13_REQUESTENTITYTOOLARGE
 
 class coapRcUnsupportedContentFormat(coapRc):
-    def __init__(self):
-        coapRc.__init__(self,(4,15))
+    rc = d.COAP_RC_4_15_UNSUPPORTEDCONTENTFORMAT
 
 #===== server error
 
 class coapRcInternalServerError(coapRc):
-    def __init__(self):
-        coapRc.__init__(self,(5,00))
+    rc = d.COAP_RC_5_00_INTERNALSERVERERROR
 
 class coapRcNotImplemented(coapRc):
-    def __init__(self):
-        coapRc.__init__(self,(5,01))
+    rc = d.COAP_RC_5_01_NOTIMPLEMENTED
 
 class coapRcBadGateway(coapRc):
-    def __init__(self):
-        coapRc.__init__(self,(5,02))
+    rc = d.COAP_RC_5_02_BADGATEWAY
 
 class coapRcServiceUnavailable(coapRc):
-    def __init__(self):
-        coapRc.__init__(self,(5,03))
+    rc = d.COAP_RC_5_03_SERVICEUNAVAILABLE
 
 class coapRcGatewayTimeout(coapRc):
-    def __init__(self):
-        coapRc.__init__(self,(5,04))
+    rc = d.COAP_RC_5_04_GATEWAYTIMEOUT
 
 class coapRcProxyingNotSupported(coapRc):
-    def __init__(self):
-        coapRc.__init__(self,(5,05))
+    rc = d.COAP_RC_5_05_PROXYINGNOTSUPPORTED
