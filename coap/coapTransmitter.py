@@ -6,8 +6,9 @@ log = logging.getLogger('coapTransmitter')
 log.setLevel(logging.ERROR)
 log.addHandler(NullHandler())
 
-import threading
 import time
+import threading
+import random
 
 import coapDefines   as d
 import coapException as e
@@ -112,7 +113,7 @@ class coapTransmitter(threading.Thread):
         self.coapError       = None
         self.state           = self.STATE_INIT   # current state of the FSM
         self.maxRetransmit   = d.DFLT_MAX_RETRANSMIT
-        self.numTxCOM        = 0
+        self.numTxCON        = 0
         self.fsmGoOn         = True
         self.fsmAction       = {
             self.STATE_INIT:                     self._action_INIT,
@@ -365,7 +366,7 @@ class coapTransmitter(threading.Thread):
             assert self.receivedACK
             (timestamp,srcIp,srcPort,message) = self.receivedACK
         
-        if message['code']==COAP_RC_NONE:
+        if message['code']==d.COAP_RC_NONE:
             # response NOT piggybacked
             
             # update FSM state
