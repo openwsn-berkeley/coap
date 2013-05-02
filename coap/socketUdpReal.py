@@ -10,18 +10,19 @@ import socket
 import time
 
 import socketUdp
+import threading
 
 class socketUdpReal(socketUdp.socketUdp):
 
     BUFSIZE = 1024
     
-    def __init__(self,ipAddress,udpPort):
+    def __init__(self,ipAddress,udpPort,callback):
         
         # log
         log.debug('creating instance')
         
         # initialize the parent class
-        socketUdp.socketUdp.__init__(self,ipAddress,udpPort)
+        socketUdp.socketUdp.__init__(self,ipAddress,udpPort,callback)
         
         # change name
         self.name       = 'socketUdpRead@{0}:{1}'.format(self.ipAddress,self.udpPort)
