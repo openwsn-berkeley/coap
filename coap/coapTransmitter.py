@@ -280,6 +280,7 @@ class coapTransmitter(threading.Thread):
             code             = self.code,
             messageId        = self.messageId,
             options          = self.options,
+            payload          = self.payload,
         )
         
         # send
@@ -310,6 +311,7 @@ class coapTransmitter(threading.Thread):
             code             = self.code,
             messageId        = self.messageId,
             options          = self.options,
+            payload          = self.payload,
         )
         
         # send
