@@ -4,7 +4,7 @@ COAP_PAYLOAD_MARKER                    = 0xff
 COAP_SCHEME                            = 'coap://'
 
 # Default transmission parameters
-DFLT_ACK_TIMEOUT                       = 2    # in s. 
+DFLT_ACK_TIMEOUT                       = 10    # in s. 
 DFLT_ACK_RANDOM_FACTOR                 = 1.5  # ACK timeout in [DFLT_ACK_TIMEOUT..DFLT_ACK_TIMEOUT*DFLT_ACK_RANDOM_FACTOR]
 DFLT_MAX_RETRANSMIT                    = 4    # max number of retransmissions for NON
 DFLT_NSTART                            = 1    # max number of simultaneous outstanding interactions to a given server

@@ -26,6 +26,7 @@ class socketUdpReal(socketUdp.socketUdp):
         
         # change name
         self.name       = 'socketUdpRead@{0}:{1}'.format(self.ipAddress,self.udpPort)
+        self.callback   = callback
         
         # local variables
         self.socketLock = threading.Lock()
@@ -86,4 +87,5 @@ class socketUdpReal(socketUdp.socketUdp):
                 
                 log.debug("got {2} from {1} at {0}".format(timestamp,source,data))
                 
-                return (timestamp,source,data)
+                #call the callback with the params
+                self.callback(timestamp,source,data)
