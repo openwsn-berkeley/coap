@@ -7,7 +7,15 @@ log.setLevel(logging.ERROR)
 log.addHandler(NullHandler())
 
 import traceback
+import re
 
+#===== trimming zeros on addresses
+
+def trimAddress(address):
+    return re.sub(':0+',_replaceZeros,address)
+
+def _replaceZeros(st):
+    return ":"
 #===== converting
 
 def int2buf(val,len):

@@ -49,12 +49,14 @@ def buildMessage(type,token,code,messageId,options=[],payload=[]):
         message += [d.COAP_PAYLOAD_MARKER]
     message += payload
     
+    print "sent message {0}".format( ",".join(str(c) for c in message))
+    
     return message
 
 def parseMessage(message):
     
     returnVal = {}
-    
+    print "received message {0}".format( ",".join(str(c) for c in message))
     # header
     if len(message)<4:
         raise e.messageFormatError('message to short, {0} bytes: not space for header'.format(len(message)))

@@ -8,6 +8,7 @@ log.addHandler(NullHandler())
 
 import re
 
+import coapUtils     as u
 import coapOption    as o
 import coapException as e
 import coapDefines   as d
@@ -100,6 +101,9 @@ def uri2options(uri):
         queries   = [q for q in uri.split('?')[1].split('&') if q]
         log.debug('queries  : {0}'.format(queries))
         raise NotImplementedError()
+    
+    ip=ip.lower()
+    ip=u.trimAddress(ip)
     
     return (ip,port,options)
 

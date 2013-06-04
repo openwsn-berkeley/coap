@@ -114,6 +114,7 @@ class coap(object):
         assert type(uri)==str
         
         (destIp,destPort,uriOptions) = coapUri.uri2options(uri)
+        
         with self.transmittersLock:
             self._cleanupTransmitter()
             messageId        = self._getMessageID(destIp,destPort)
@@ -194,6 +195,8 @@ class coap(object):
         log.debug(output)
         
         srcIp   = sender[0]
+        srcIp   = u.trimAddress(srcIp)
+        
         srcPort = sender[1]
         
         # parse messages
@@ -288,6 +291,7 @@ class coap(object):
                 
                 # find transmitter
                 msgkey = (srcIp,srcPort,message['token'],message['messageId'])
+                
                 found  = False
                 with self.transmittersLock:
                     self._cleanupTransmitter()

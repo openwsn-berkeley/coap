@@ -190,7 +190,7 @@ class coapTransmitter(threading.Thread):
         with self.stateLock:
             return self.state
     
-    def receiveMessage(self,timestamp,srcIp,srcPort,message):
+    def receiveMessage(self, timestamp, srcIp, srcPort, message):
         assert srcIp==self.destIp
         assert srcPort==self.destPort
         assert (message['token']==self.token) or (message['messageId']==self.messageId)
