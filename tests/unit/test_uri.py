@@ -56,6 +56,58 @@ URIANDOPTIONS = [
             ),
         )
     ),
+    (
+        'coap://vs0.inf.ethz.ch:5683/',
+        (
+            'vs0.inf.ethz.ch',
+            5683,
+            (),
+        )
+    ),
+    (
+        'coap://vs0.inf.ethz.ch:5683/test1/test2',
+        (
+            'vs0.inf.ethz.ch',
+            5683,
+            (
+                coapOption.UriPath(path='test1'),
+                coapOption.UriPath(path='test2'),
+            ),
+        )
+    ),
+    (
+        'coap://vs0.inf.ethz.ch:5683/test2/test3/',
+        (
+            'vs0.inf.ethz.ch',
+            5683,
+            (
+                coapOption.UriPath(path='test2'),
+                coapOption.UriPath(path='test3'),
+            ),
+        )
+    ),
+    (
+        'coap://vs0.inf.ethz.ch/test2/test3/',
+        (
+            'vs0.inf.ethz.ch',
+            5683,
+            (
+                coapOption.UriPath(path='test2'),
+                coapOption.UriPath(path='test3'),
+            ),
+        )
+    ),
+    (
+        'coap://www.poi1-poi2_poi3.poi4.com/test2/test3/',
+        (
+            'www.poi1-poi2_poi3.poi4.com',
+            5683,
+            (
+                coapOption.UriPath(path='test2'),
+                coapOption.UriPath(path='test3'),
+            ),
+        )
+    ),
 ]
 
 @pytest.fixture(params=URIANDOPTIONS)
@@ -108,6 +160,6 @@ def test_options2path(logFixture, optionsAndPath):
     
     result = coapUri.options2path(options)
     
-    log.debug('result: {0}'.format(result))
+    log.debug('result:  {0}'.format(result))
     
     assert result==path
