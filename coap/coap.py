@@ -107,10 +107,10 @@ class coap(object):
     
     #===== transmit
     
-    def _transmit(self,uri,confirmable,code,options=[],payload=None):
+    def _transmit(self,uri,confirmable,code,options=[],payload=[]):
         assert code in d.METHOD_ALL
         if code in [d.METHOD_GET,d.METHOD_DELETE]:
-            assert payload==None
+            assert payload==[]
         assert type(uri)==str
         
         (destIp,destPort,uriOptions) = coapUri.uri2options(uri)

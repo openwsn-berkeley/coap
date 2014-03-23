@@ -12,10 +12,12 @@ import re
 #===== trimming zeros on addresses
 
 def trimAddress(address):
-    return re.sub(':0+',_replaceZeros,address)
+    return re.sub(
+        pattern = ':0+([0-9A-Fa-f]+)',
+        repl    = ':\1',
+        string  = address,
+    )
 
-def _replaceZeros(st):
-    return ":"
 #===== converting
 
 def int2buf(val,len):

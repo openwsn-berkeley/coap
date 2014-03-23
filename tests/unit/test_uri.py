@@ -46,6 +46,16 @@ URIANDOPTIONS = [
         )
     ),
     (
+        'coap://[bbbb::1415:92cc:0:2]/t',
+        (
+            'bbbb::1415:92cc:0:2',
+            5683,
+            (
+                coapOption.UriPath(path='t'),
+            ),
+        )
+    ),
+    (
         'coap://[aaaa::1]:1234/test1/test2',
         (
             'aaaa::1',
