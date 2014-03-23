@@ -63,7 +63,7 @@ class coapTransmitter(threading.Thread):
             integer between 0x0000 and 0xffff.
         \param[in] destIp   The IP address of the remote CoAP endpoint, a
             string of the form 'aaaa::1'.
-        \param[in] destPort The UDP port the remote endpoi is attached to, an
+        \param[in] destPort The UDP port the remote endpoint is attached to, an
             integer between 0x0000 and 0xffff.
         \param[in] confirmable A boolean indicating whether the CoAP request is
             to be send confirmable (True) or non-confirmable (False).
