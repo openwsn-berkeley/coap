@@ -82,6 +82,25 @@ class UriPath(coapOption):
     def getPayloadBytes(self):
         return [ord(b) for b in self.path]
 
+class ContentFormat(coapOption):
+    
+    def __init__(self,format):
+        
+        assert len(format)==1
+        assert format[0] in d.FORMAT_ALL
+        
+        # initialize parent
+        coapOption.__init__(self,d.OPTION_NUM_CONTENTFORMAT)
+        
+        # store params
+        self.format = format[0]
+    
+    def __repr__(self):
+        return 'ContentFormat(format={0})'.format(self.format)
+    
+    def getPayloadBytes(self):
+        return [self.format]
+
 #============================ functions =======================================
 
 def parseOption(message,previousOptionNumber):
@@ -173,7 +192,9 @@ def parseOption(message,previousOptionNumber):
     
     if optionNumber==d.OPTION_NUM_URIPATH:
         option = UriPath(path=''.join([chr(b) for b in optionValue]))
+    if optionNumber==d.OPTION_NUM_CONTENTFORMAT:
+        option = ContentFormat(format=optionValue)
     else:
-        raise NotImplementedError()
+        raise NotImplementedError('option {0} not implemented'.format(optionNumber))
     
     return (option,message)
