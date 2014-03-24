@@ -190,9 +190,9 @@ def parseOption(message,previousOptionNumber):
     if optionNumber not in d.OPTION_NUM_ALL:
         raise e.messageFormatError('invalid option number {0}'.format(optionNumber))
     
-    if optionNumber==d.OPTION_NUM_URIPATH:
+    if   optionNumber==d.OPTION_NUM_URIPATH:
         option = UriPath(path=''.join([chr(b) for b in optionValue]))
-    if optionNumber==d.OPTION_NUM_CONTENTFORMAT:
+    elif optionNumber==d.OPTION_NUM_CONTENTFORMAT:
         option = ContentFormat(format=optionValue)
     else:
         raise NotImplementedError('option {0} not implemented'.format(optionNumber))
