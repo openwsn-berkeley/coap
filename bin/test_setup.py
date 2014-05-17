@@ -1,11 +1,4 @@
 
-#============================ path ============================================
-
-import os
-import sys
-here = sys.path[0]
-sys.path.insert(0, os.path.join(here,'..'))
-
 #============================ logging =========================================
 import logging
 import logging.handlers
@@ -22,7 +15,7 @@ fileLogger.setFormatter(
 )
 
 consoleLogger = logging.StreamHandler()
-consoleLogger.setLevel(logging.CRITICAL)
+consoleLogger.setLevel(logging.DEBUG)
 
 for loggerName in [
         'coap',
