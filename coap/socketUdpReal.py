@@ -72,14 +72,16 @@ class socketUdpReal(socketUdp.socketUdp):
                 raw,conn = self.socket_handler.recvfrom(self.BUFSIZE)
             except socket.error as err:
                 log.critical("socket error: {0}".format(err))
-                raise
+                self.goOn = False
+                continue
             else:
                 if not raw:
-                    log.error("no data read from socket")
-                    return
+                    log.error("no data read from socket, stopping")
+                    self.goOn = False
+                    continue
                 if not self.goOn:
-                    log.warning("goOn is false; tearing down")
-                    raise TearDownError()
+                    log.warning("goOn is false")
+                    continue
                 
                 timestamp = time.time()
                 source    = (conn[0],conn[1])
@@ -89,3 +91,8 @@ class socketUdpReal(socketUdp.socketUdp):
                 
                 #call the callback with the params
                 self.callback(timestamp,source,data)
+        
+        # if you get here, we are tearing down the socket
+        
+        # log
+        log.info("teardown")
