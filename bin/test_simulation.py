@@ -1,43 +1,13 @@
-import logging
-import logging.handlers
-
-from coap import coap
-
-#============================ logging =========================================
-fileLogger = logging.handlers.RotatingFileHandler(
-   filename    = 'testcoap.log',
-   mode        = 'w',
-   backupCount = 5,
-)
-fileLogger.setFormatter(
-    logging.Formatter(
-        '%(asctime)s [%(name)s:%(levelname)s] %(message)s'
-    )
-)
-
-consoleLogger = logging.StreamHandler()
-consoleLogger.setLevel(logging.CRITICAL)
-
-for loggerName in [
-        'coap',
-        'coapUri',
-        'coapTransmitter',
-        'coapMessage',
-        'socketUdpReal',
-    ]:
-    temp = logging.getLogger(loggerName)
-    temp.setLevel(logging.DEBUG)
-    temp.addHandler(fileLogger)
-    temp.addHandler(consoleLogger)
-
-#============================ main ============================================
+import test_setup
+from   coap import coap
 
 MOTE_IP = 'bbbb::1415:92cc:0:2'
 
+# open
 c = coap.coap()
 
+# change timeout
 print c.respTimeout
-
 c.respTimeout = 2 # sec
 
 # get status of LED
