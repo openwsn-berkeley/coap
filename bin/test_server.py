@@ -4,8 +4,9 @@ here = sys.path[0]
 sys.path.insert(0, os.path.join(here,'..'))
 
 import threading
-from   coap   import    coap, \
-                        coapResource
+from   coap   import    coap,                    \
+                        coapResource,            \
+                        coapDefines as d
 import test_setup
 
 class testResource(coapResource.coapResource):
@@ -23,7 +24,7 @@ class testResource(coapResource.coapResource):
         
         respCode        = d.COAP_RC_2_05_CONTENT
         respOptions     = []
-        respPayload     = '123'
+        respPayload     = [ord(b) for b in 'dummy response']
         
         return (respCode,respOptions,respPayload)
 
