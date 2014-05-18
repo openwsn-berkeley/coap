@@ -18,7 +18,7 @@ class coapException(Exception):
         self.reason   = reason
     
     def __str__(self):
-        return self.reason
+        return '{0}(reason={1})'.format(self.__class__.__name__,self.reason)
 
 #============================ timeout =========================================
 
@@ -42,8 +42,12 @@ class messageFormatError(coapException):
 
 class coapRc(coapException):
     rc=None
-    def __init__(self):
+    def __init__(self,reason=''):
+        
         assert self.rc
+        
+        # initialize parent
+        coapException.__init__(self,reason=reason)
 
 class coapRcFactory(object):
     def __new__(klass,rc):
