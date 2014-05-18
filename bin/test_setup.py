@@ -19,6 +19,7 @@ consoleLogger.setLevel(logging.DEBUG)
 
 for loggerName in [
         'coap',
+        'coapOption',
         'coapUri',
         'coapTransmitter',
         'coapMessage',
