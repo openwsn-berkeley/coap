@@ -310,12 +310,21 @@ class coap(object):
                             v.receiveMessage(timestamp,srcIp,srcPort,message)
                             break
                 if found==False:
-                    raise e.coapRcBadRequest()
+                    raise e.coapRcBadRequest(
+                        'could not find transmitter corresponding to {0}, transmitters are {1}'.format(
+                            msgkey,
+                            ','.join([str(k) for k in self.transmitters.keys()])
+                        )
+                    )
             
             else:
                 raise NotImplementedError()
         
         except e.coapRc as err:
+            
+            # log
+            log.warning(err)
+            
             # determine type of response packet
             if   message['type']==d.TYPE_CON:
                 responseType = d.TYPE_ACK
