@@ -25,6 +25,7 @@ env = Environment(
 Help('''
 Usage:
     scons unittests
+    scons functests
 ''')
 
 def default(env,target,source): print SCons.Script.help_text
@@ -40,3 +41,21 @@ unittests = env.Command(
 )
 env.AlwaysBuild(unittests)
 env.Alias('unittests', unittests)
+
+#===== functests
+
+functests = env.Command(
+    'test_report.xml', [],
+    'py.test tests/func/ --junitxml $TARGET.file',
+)
+env.AlwaysBuild(functests)
+env.Alias('functests', functests)
+
+#===== alltests
+
+alltests = env.Command(
+    'test_report.xml', [],
+    'py.test tests --junitxml $TARGET.file',
+)
+env.AlwaysBuild(alltests)
+env.Alias('alltests', alltests)

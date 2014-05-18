@@ -39,7 +39,7 @@ class coapResource(object):
         log.debug('"{0}" matches "{1}"?'.format(pathToMatch,self.path))
         temp_path        = self.path.lstrip('/').rstrip('/')
         temp_pathToMatch = pathToMatch.lstrip('/').rstrip('/')
-        if re.match(temp_path,temp_pathToMatch):
+        if temp_path==temp_pathToMatch:
             return True
         else:
             return False

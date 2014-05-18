@@ -8,6 +8,7 @@ log.addHandler(NullHandler())
 
 import threading
 import random
+import traceback
 
 import coapTokenizer    as t
 import coapUtils        as u
@@ -35,6 +36,7 @@ class coap(object):
         self.resources            = []
         self.transmittersLock     = threading.RLock()
         self.transmitters         = {}
+        self.ackTimeout           = d.DFLT_ACK_TIMEOUT
         self.respTimeout          = d.DFLT_RESPONSE_TIMEOUT
         if testing:
             self.socketUdp        = socketUdpDispatcher(
@@ -131,6 +133,7 @@ class coap(object):
                 token        = token,
                 options      = uriOptions+options,
                 payload      = payload,
+                ackTimeout   = self.ackTimeout,
                 respTimeout  = self.respTimeout,
             )
             key              = (destIp,destPort,token,messageId)
@@ -309,12 +312,21 @@ class coap(object):
                             v.receiveMessage(timestamp,srcIp,srcPort,message)
                             break
                 if found==False:
-                    raise e.coapRcBadRequest()
+                    raise e.coapRcBadRequest(
+                        'could not find transmitter corresponding to {0}, transmitters are {1}'.format(
+                            msgkey,
+                            ','.join([str(k) for k in self.transmitters.keys()])
+                        )
+                    )
             
             else:
                 raise NotImplementedError()
         
         except e.coapRc as err:
+            
+            # log
+            log.warning(err)
+            
             # determine type of response packet
             if   message['type']==d.TYPE_CON:
                 responseType = d.TYPE_ACK
@@ -337,3 +349,6 @@ class coap(object):
                 destPort         = srcPort,
                 msg              = response,
             )
+        
+        except Exception as err:
+            log.critical(traceback.format_exc())

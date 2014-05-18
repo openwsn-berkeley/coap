@@ -66,6 +66,20 @@ class coapOption(object):
         
         return returnVal
 
+#=== OPTION_NUM_IFMATCH
+
+#=== OPTION_NUM_URIHOST
+
+#=== OPTION_NUM_ETAG
+
+#=== OPTION_NUM_IFNONEMATCH
+
+#=== OPTION_NUM_URIPORT
+
+#=== OPTION_NUM_LOCATIONPATH
+
+#=== OPTION_NUM_URIPATH
+
 class UriPath(coapOption):
     
     def __init__(self,path):
@@ -81,6 +95,8 @@ class UriPath(coapOption):
     
     def getPayloadBytes(self):
         return [ord(b) for b in self.path]
+
+#=== OPTION_NUM_CONTENTFORMAT
 
 class ContentFormat(coapOption):
     
@@ -100,6 +116,67 @@ class ContentFormat(coapOption):
     
     def getPayloadBytes(self):
         return [self.format]
+
+#=== OPTION_NUM_MAXAGE
+
+#=== OPTION_NUM_URIQUERY
+
+#=== OPTION_NUM_ACCEPT
+
+#=== OPTION_NUM_LOCATIONQUERY
+
+#=== OPTION_NUM_BLOCK2
+
+class Block2(coapOption):
+    
+    def __init__(self,num=None,m=None,szx=None,bytes=[]):
+        
+        if bytes:
+            assert num==None
+            assert m==None
+            assert szx==None
+        else:
+            assert num!=None
+            assert m!=None
+            assert szx!=None
+        
+        # initialize parent
+        coapOption.__init__(self,d.OPTION_NUM_BLOCK2)
+        
+        # store params
+        if num:
+            # values of num, m, szx specified explicitly
+            self.num   = num
+            self.m     = m
+            self.szx   = szx
+        else:
+            # values of num, m, szx need to be extracted
+            if   len(bytes)==1:
+                self.num   = (bytes[0]>>4)&0x0f
+                self.m     = (bytes[0]>>3)&0x01
+                self.szx   = (bytes[0]>>0)&0x07
+            elif len(bytes)==2:
+                self.num   = bytes[0]<<8 | (bytes[1]>>4)&0x0f
+                self.m     = (bytes[1]>>3)&0x01
+                self.szx   = (bytes[1]>>0)&0x07
+            elif len(bytes)==3:
+                self.num   = bytes[0]<<16 | bytes[1]<<8 | (bytes[2]>>4)&0x0f
+                self.m     = (bytes[2]>>3)&0x01
+                self.szx   = (bytes[2]>>0)&0x07
+            else:
+                raise ValueError('unexpected Block2 len={0}'.format(len(bytes)))
+    
+    def __repr__(self):
+        return 'Block2(num={0},m={1},szx={2})'.format(self.num,self.m,self.szx)
+    
+    def getPayloadBytes(self):
+        return NotImplementedError()
+
+#=== OPTION_NUM_BLOCK1
+
+#=== OPTION_NUM_PROXYURI
+
+#=== OPTION_NUM_PROXYSCHEME
 
 #============================ functions =======================================
 
@@ -157,7 +234,7 @@ def parseOption(message,previousOptionNumber):
     else:
         raise e.messageFormatError('invalid optionDelta={0}'.format(optionDelta))
     
-    log.debug('optionDelta={0}'.format(optionDelta))
+    log.debug('optionDelta   = {0}'.format(optionDelta))
     
     # optionLength
     if   optionLength<=12:
@@ -175,7 +252,7 @@ def parseOption(message,previousOptionNumber):
     else:
         raise e.messageFormatError('invalid optionLength={0}'.format(optionLength))
     
-    log.debug('optionLength={0}'.format(optionLength))
+    log.debug('optionLength  = {0}'.format(optionLength))
     
     # optionValue
     if len(message)<optionLength:
@@ -183,17 +260,22 @@ def parseOption(message,previousOptionNumber):
     optionValue = message[:optionLength]
     message = message[optionLength:]
     
-    log.debug('optionValue={0}'.format(u.formatBuf(optionValue)))
+    log.debug('optionValue   = {0}'.format(u.formatBuf(optionValue)))
     
     #===== create option
     optionNumber = previousOptionNumber+optionDelta
+    
+    log.debug('optionNumber  = {0}'.format(optionNumber))
+    
     if optionNumber not in d.OPTION_NUM_ALL:
-        raise e.messageFormatError('invalid option number {0}'.format(optionNumber))
+        raise e.messageFormatError('invalid option number {0} (0x{0:x})'.format(optionNumber))
     
     if   optionNumber==d.OPTION_NUM_URIPATH:
         option = UriPath(path=''.join([chr(b) for b in optionValue]))
     elif optionNumber==d.OPTION_NUM_CONTENTFORMAT:
         option = ContentFormat(format=optionValue)
+    elif optionNumber==d.OPTION_NUM_BLOCK2:
+        option = Block2(bytes=optionValue)
     else:
         raise NotImplementedError('option {0} not implemented'.format(optionNumber))
     

@@ -61,7 +61,7 @@ def buildMessage(type,token,code,messageId,options=[],payload=[]):
     # payload
     if payload:
         message += [d.COAP_PAYLOAD_MARKER]
-    message += payload
+        message += payload
     
     return message
 

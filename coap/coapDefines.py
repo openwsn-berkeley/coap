@@ -4,7 +4,7 @@ COAP_PAYLOAD_MARKER                    = 0xff
 COAP_SCHEME                            = 'coap://'
 
 # Default transmission parameters
-DFLT_ACK_TIMEOUT                       = 20    # in s. 
+DFLT_ACK_TIMEOUT                       = 20   # in s. 
 DFLT_ACK_RANDOM_FACTOR                 = 1.5  # ACK timeout in [DFLT_ACK_TIMEOUT..DFLT_ACK_TIMEOUT*DFLT_ACK_RANDOM_FACTOR]
 DFLT_MAX_RETRANSMIT                    = 4    # max number of retransmissions for NON
 DFLT_NSTART                            = 1    # max number of simultaneous outstanding interactions to a given server
@@ -104,6 +104,8 @@ OPTION_NUM_MAXAGE                      = 14
 OPTION_NUM_URIQUERY                    = 15
 OPTION_NUM_ACCEPT                      = 16
 OPTION_NUM_LOCATIONQUERY               = 20
+OPTION_NUM_BLOCK2                      = 23
+OPTION_NUM_BLOCK1                      = 27
 OPTION_NUM_PROXYURI                    = 35
 OPTION_NUM_PROXYSCHEME                 = 39
 OPTION_NUM_ALL = [
@@ -119,6 +121,8 @@ OPTION_NUM_ALL = [
     OPTION_NUM_URIQUERY,
     OPTION_NUM_ACCEPT,
     OPTION_NUM_LOCATIONQUERY,
+    OPTION_NUM_BLOCK2,
+    OPTION_NUM_BLOCK1,
     OPTION_NUM_PROXYURI,
     OPTION_NUM_PROXYSCHEME,
 ]
