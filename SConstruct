@@ -50,3 +50,12 @@ functests = env.Command(
 )
 env.AlwaysBuild(functests)
 env.Alias('functests', functests)
+
+#===== alltests
+
+alltests = env.Command(
+    'test_report.xml', [],
+    'py.test tests --junitxml $TARGET.file',
+)
+env.AlwaysBuild(alltests)
+env.Alias('alltests', alltests)
