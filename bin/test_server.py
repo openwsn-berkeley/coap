@@ -7,7 +7,7 @@ import threading
 from   coap   import    coap,                    \
                         coapResource,            \
                         coapDefines as d
-import test_setup
+import logging_setup
 
 class testResource(coapResource.coapResource):
     

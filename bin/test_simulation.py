@@ -3,7 +3,7 @@ import sys
 here = sys.path[0]
 sys.path.insert(0, os.path.join(here,'..'))
 
-import test_setup
+import logging_setup
 from   coap import coap
 
 MOTE_IP = 'bbbb::1415:92cc:0:2'
