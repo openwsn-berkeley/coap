@@ -8,6 +8,7 @@ log.addHandler(NullHandler())
 
 import threading
 import random
+import traceback
 
 import coapTokenizer    as t
 import coapUtils        as u
@@ -337,3 +338,6 @@ class coap(object):
                 destPort         = srcPort,
                 msg              = response,
             )
+        
+        except Exception as err:
+            log.critical(traceback.format_exc())
