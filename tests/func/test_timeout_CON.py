@@ -27,7 +27,8 @@ def test_GET(logFixture,snoopyDispatcher,twoEndPoints):
     
     (coap1,coap2) = twoEndPoints
     
-    # adjust app-level response timeout so test is faster
+    # adjust timeouts so test is faster
+    coap2.ackTimeout    = 2
     coap2.respTimeout   = 2
     
     # have coap2 do a get

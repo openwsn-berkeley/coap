@@ -36,6 +36,7 @@ class coap(object):
         self.resources            = []
         self.transmittersLock     = threading.RLock()
         self.transmitters         = {}
+        self.ackTimeout           = d.DFLT_ACK_TIMEOUT
         self.respTimeout          = d.DFLT_RESPONSE_TIMEOUT
         if testing:
             self.socketUdp        = socketUdpDispatcher(
@@ -132,6 +133,7 @@ class coap(object):
                 token        = token,
                 options      = uriOptions+options,
                 payload      = payload,
+                ackTimeout   = self.ackTimeout,
                 respTimeout  = self.respTimeout,
             )
             key              = (destIp,destPort,token,messageId)

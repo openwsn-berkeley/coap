@@ -11,8 +11,8 @@ MOTE_IP = 'bbbb::1415:92cc:0:2'
 # open
 c = coap.coap()
 
-# change timeout
-print c.respTimeout
+# speed up timeouts
+c.ackTimeout  = 2 # sec
 c.respTimeout = 2 # sec
 
 # get status of LED
