@@ -14,7 +14,6 @@ import coapDefines   as d
 def sortOptions(options):
     # TODO implement sorting when more options are implemented
     return options
-
 '''
     0                   1                   2                   3
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -47,6 +46,7 @@ def buildMessage(type,token,code,messageId,options=[],payload=[]):
     # header
     message += [d.COAP_VERSION<<6 | type<<4 | TKL]
     message += [code]
+    message += [0x12] # poipoi wrong!!
     message += u.int2buf(messageId,2)
     message += u.int2buf(token,TKL)
     
