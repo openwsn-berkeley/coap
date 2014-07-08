@@ -186,14 +186,14 @@ class coap(object):
     
     #===== receive
         
-    def _receive(self,timestamp,sender,bytes):
+    def _receive(self,timestamp,sender,rawbytes):
         # all UDP packets are received here
         
         output  = []
         output += ['\n{0} _receive message:'.format(self.name)]
         output += ['- timestamp: {0}'.format(timestamp)]
         output += ['- sender:    {0}'.format(sender)]
-        output += ['- bytes:     {0}'.format(u.formatBuf(bytes))]
+        output += ['- bytes:     {0}'.format(u.formatBuf(rawbytes))]
         output  = '\n'.join(output)
         log.debug(output)
         
@@ -204,9 +204,9 @@ class coap(object):
         
         # parse messages
         try:
-            message = m.parseMessage(bytes)
+            message = m.parseMessage(rawbytes)
         except e.messageFormatError as err:
-            log.warning('malformed message {0}: {1}'.format(u.formatBuf(bytes),str(err)))
+            log.warning('malformed message {0}: {1}'.format(u.formatBuf(rawbytes),str(err)))
             return
         
         # dispatch message

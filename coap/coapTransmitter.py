@@ -454,11 +454,11 @@ class coapTransmitter(threading.Thread):
         
         # decide whether to ACK response
         if   message['type']==d.TYPE_CON:
-            self._setState(STATE_TXACK)
+            self._setState(self.STATE_TXACK)
         elif message['type']==d.TYPE_NON:
             # successful end of FSM
             with self.dataLock:
-               self.coapResponse = message
+                self.coapResponse = message
         else:
             raise SystemError('unexpected message type {0}'.format(message['type']))
         
@@ -490,7 +490,7 @@ class coapTransmitter(threading.Thread):
         
         # successful end of FSM
         with self.dataLock:
-           self.coapResponse = message
+            self.coapResponse = message
         
         # kick FSM
         self._kickFsm()

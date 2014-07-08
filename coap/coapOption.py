@@ -100,16 +100,16 @@ class UriPath(coapOption):
 
 class ContentFormat(coapOption):
     
-    def __init__(self,format):
+    def __init__(self,cformat):
         
-        assert len(format)==1
-        assert format[0] in d.FORMAT_ALL
+        assert len(cformat)==1
+        assert cformat[0] in d.FORMAT_ALL
         
         # initialize parent
         coapOption.__init__(self,d.OPTION_NUM_CONTENTFORMAT)
         
         # store params
-        self.format = format[0]
+        self.format = cformat[0]
     
     def __repr__(self):
         return 'ContentFormat(format={0})'.format(self.format)
@@ -129,9 +129,9 @@ class ContentFormat(coapOption):
 
 class Block2(coapOption):
     
-    def __init__(self,num=None,m=None,szx=None,bytes=[]):
+    def __init__(self,num=None,m=None,szx=None,rawbytes=[]):
         
-        if bytes:
+        if rawbytes:
             assert num==None
             assert m==None
             assert szx==None
@@ -151,20 +151,20 @@ class Block2(coapOption):
             self.szx   = szx
         else:
             # values of num, m, szx need to be extracted
-            if   len(bytes)==1:
-                self.num   = (bytes[0]>>4)&0x0f
-                self.m     = (bytes[0]>>3)&0x01
-                self.szx   = (bytes[0]>>0)&0x07
-            elif len(bytes)==2:
-                self.num   = bytes[0]<<8 | (bytes[1]>>4)&0x0f
-                self.m     = (bytes[1]>>3)&0x01
-                self.szx   = (bytes[1]>>0)&0x07
-            elif len(bytes)==3:
-                self.num   = bytes[0]<<16 | bytes[1]<<8 | (bytes[2]>>4)&0x0f
-                self.m     = (bytes[2]>>3)&0x01
-                self.szx   = (bytes[2]>>0)&0x07
+            if   len(rawbytes)==1:
+                self.num   = (rawbytes[0]>>4)&0x0f
+                self.m     = (rawbytes[0]>>3)&0x01
+                self.szx   = (rawbytes[0]>>0)&0x07
+            elif len(rawbytes)==2:
+                self.num   = rawbytes[0]<<8 | (rawbytes[1]>>4)&0x0f
+                self.m     = (rawbytes[1]>>3)&0x01
+                self.szx   = (rawbytes[1]>>0)&0x07
+            elif len(rawbytes)==3:
+                self.num   = rawbytes[0]<<16 | rawbytes[1]<<8 | (rawbytes[2]>>4)&0x0f
+                self.m     = (rawbytes[2]>>3)&0x01
+                self.szx   = (rawbytes[2]>>0)&0x07
             else:
-                raise ValueError('unexpected Block2 len={0}'.format(len(bytes)))
+                raise ValueError('unexpected Block2 len={0}'.format(len(rawbytes)))
     
     def __repr__(self):
         return 'Block2(num={0},m={1},szx={2})'.format(self.num,self.m,self.szx)
@@ -224,12 +224,12 @@ def parseOption(message,previousOptionNumber):
     elif optionDelta==13:
         if len(message)<1:
             raise e.messageFormatError('message to short, {0} bytes: not space for 1B optionDelta'.format(len(message)))
-        optionDelta = u.buf2int(messsage[0])+13
+        optionDelta = u.buf2int(message[0])+13
         message = message[1:]
     elif optionDelta==14:
         if len(message)<2:
             raise e.messageFormatError('message to short, {0} bytes: not space for 2B optionDelta'.format(len(message)))
-        optionDelta = u.buf2int(messsage[0:1])+269
+        optionDelta = u.buf2int(message[0:1])+269
         message = message[2:]
     else:
         raise e.messageFormatError('invalid optionDelta={0}'.format(optionDelta))
@@ -242,12 +242,12 @@ def parseOption(message,previousOptionNumber):
     elif optionLength==13:
         if len(message)<1:
             raise e.messageFormatError('message to short, {0} bytes: not space for 1B optionLength'.format(len(message)))
-        optionLength = u.buf2int(messsage[0])+13
+        optionLength = u.buf2int(message[0])+13
         message = message[1:]
     elif optionLength==14:
         if len(message)<2:
             raise e.messageFormatError('message to short, {0} bytes: not space for 2B optionLength'.format(len(message)))
-        optionLength = u.buf2int(messsage[0:1])+269
+        optionLength = u.buf2int(message[0:1])+269
         message = message[2:]
     else:
         raise e.messageFormatError('invalid optionLength={0}'.format(optionLength))
