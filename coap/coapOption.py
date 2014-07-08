@@ -275,7 +275,7 @@ def parseOption(message,previousOptionNumber):
     elif optionNumber==d.OPTION_NUM_CONTENTFORMAT:
         option = ContentFormat(format=optionValue)
     elif optionNumber==d.OPTION_NUM_BLOCK2:
-        option = Block2(bytes=optionValue)
+        option = Block2(rawbytes=optionValue)
     else:
         raise NotImplementedError('option {0} not implemented'.format(optionNumber))
     
