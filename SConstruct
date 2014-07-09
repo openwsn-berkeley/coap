@@ -33,6 +33,15 @@ Default(env.Command('default', None, default))
 
 #============================ SCons targets ===================================
 
+#===== pylint
+
+pylint = env.Command(
+    'test_report.xml', [],
+    'pylint coap > pylint.log',
+)
+env.AlwaysBuild(pylint)
+env.Alias('pylint', pylint)
+
 #===== unittests
 
 unittests = env.Command(
