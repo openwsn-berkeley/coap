@@ -36,8 +36,8 @@ Default(env.Command('default', None, default))
 #===== pylint_all
 
 pylint_all = env.Command(
-    'pylint.log', [],
-    'pylint -E coap > $TARGET.file',
+    'pylint_all.log', [],
+    'pylint --output-format=parseable    coap > $TARGET.file',
 )
 env.AlwaysBuild(pylint_all)
 env.Alias('pylint_all', pylint_all)
@@ -45,8 +45,8 @@ env.Alias('pylint_all', pylint_all)
 #===== pylint_error
 
 pylint_error = env.Command(
-    'pylint.log', [],
-    'pylint coap > $TARGET.file',
+    'pylint_error.log', [],
+    'pylint --output-format=parseable -E coap > $TARGET.file',
 )
 env.AlwaysBuild(pylint_error)
 env.Alias('pylint_error', pylint_error)
