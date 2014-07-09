@@ -5,4 +5,4 @@ python:
 
 script:
 - scons unittests
-- scons pylint
+- scons pylint_error
