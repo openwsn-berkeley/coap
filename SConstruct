@@ -36,8 +36,8 @@ Default(env.Command('default', None, default))
 #===== pylint
 
 pylint = env.Command(
-    'test_report.xml', [],
-    'pylint coap > pylint.log',
+    'pylint.log', [],
+    'pylint -E coap > $TARGET.file',
 )
 env.AlwaysBuild(pylint)
 env.Alias('pylint', pylint)
