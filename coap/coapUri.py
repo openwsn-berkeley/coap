@@ -89,7 +89,7 @@ def uri2options(uri):
             host   = m.group(1)
             port   = d.DEFAULT_UDP_PORT
     if (not host) or (not port):
-        raise e.coapMalformattedUri('invalid host and port {0}'.format(temp))
+        raise e.coapMalformattedUri('invalid host and port {0}'.format(hostPort))
     
     # log
     log.debug('host     : {0}'.format(host))

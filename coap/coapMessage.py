@@ -29,8 +29,8 @@ def sortOptions(options):
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 '''
 
-def buildMessage(type,token,code,messageId,options=[],payload=[]):
-    assert type in d.TYPE_ALL
+def buildMessage(msgtype,token,code,messageId,options=[],payload=[]):
+    assert msgtype in d.TYPE_ALL
     assert code in d.METHOD_ALL+d.COAP_RC_ALL
     
     message   = []
@@ -45,7 +45,7 @@ def buildMessage(type,token,code,messageId,options=[],payload=[]):
         raise ValueError('token {0} too long'.format(token))
     
     # header
-    message += [d.COAP_VERSION<<6 | type<<4 | TKL]
+    message += [d.COAP_VERSION<<6 | msgtype<<4 | TKL]
     message += [code]
     message += u.int2buf(messageId,2)
     message += u.int2buf(token,TKL)

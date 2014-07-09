@@ -20,9 +20,9 @@ def trimAddress(address):
 
 #===== converting
 
-def int2buf(val,len):
+def int2buf(val,length):
     returnVal  = []
-    for i in range(len,0,-1):
+    for i in range(length,0,-1):
         returnVal += [val>>(8*(i-1))&0xff]
     return returnVal
 
@@ -71,9 +71,9 @@ def ipv6AddrString2Bytes(string):
     for e in endString:
         endBytes   += int2buf(int(e,16),2)
     
-    bytes = startBytes + [0x00]*(16-len(startBytes)-len(endBytes)) + endBytes
+    rawbytes = startBytes + [0x00]*(16-len(startBytes)-len(endBytes)) + endBytes
     
-    return bytes
+    return rawbytes
 
 #===== header manipulation
 

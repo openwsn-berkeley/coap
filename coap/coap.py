@@ -22,13 +22,13 @@ from socketUdpDispatcher import socketUdpDispatcher
 from socketUdpReal       import socketUdpReal
 
 class coap(object):
-    
+
     def __init__(self,ipAddress='',udpPort=d.DEFAULT_UDP_PORT,testing=False):
-        
+
         # store params
         self.ipAddress            = ipAddress
         self.udpPort              = udpPort
-        
+
         # local variables
         self.name                 = 'coap@[{0}]:{1}'.format(self.ipAddress,self.udpPort)
         self.resourceLock         = threading.Lock()
@@ -50,14 +50,14 @@ class coap(object):
                 udpPort           = self.udpPort,
                 callback          = self._receive,
             )
-    
+
     #======================== public ==========================================
-    
+
     def close(self):
         self.socketUdp.close()
-    
+
     #===== client
-    
+
     def GET(self,uri,confirmable=True,options=[]):
         log.debug('GET {0}'.format(uri))
         response = self._transmit(
@@ -68,7 +68,7 @@ class coap(object):
         )
         log.debug('response: {0}'.format(response))
         return response['payload']
-    
+
     def PUT(self,uri,confirmable=True,options=[],payload=None):
         self._transmit(
             uri         = uri,
@@ -77,7 +77,7 @@ class coap(object):
             options     = options,
             payload     = payload
         )
-    
+
     def POST(self,uri,confirmable=True,options=[],payload=None):
         self._transmit(
             uri         = uri,
@@ -86,7 +86,7 @@ class coap(object):
             options     = options,
             payload     = payload
         )
-    
+
     def DELETE(self,uri,confirmable=True,options=[]):
         self._transmit(
             uri         = uri,
@@ -94,36 +94,36 @@ class coap(object):
             code        = d.METHOD_DELETE,
             options     = options,
         )
-    
+
     #===== server
-    
+
     def addResource(self,newResource):
         assert isinstance(newResource,r.coapResource)
-        
+
         log.debug('{0} adding resource at path="{1}"'.format(self.name,newResource.path))
-        
+
         with self.resourceLock:
             self.resources += [newResource]
-    
+
     #======================== private =========================================
-    
+
     #===== transmit
-    
+
     def _transmit(self,uri,confirmable,code,options=[],payload=[]):
         assert code in d.METHOD_ALL
         if code in [d.METHOD_GET,d.METHOD_DELETE]:
             assert payload==[]
         assert type(uri)==str
-        
+
         (destIp,destPort,uriOptions) = coapUri.uri2options(uri)
-        
+
         with self.transmittersLock:
             self._cleanupTransmitter()
             messageId        = self._getMessageID(destIp,destPort)
             token            = self._getToken(destIp,destPort)
             newTransmitter   = coapTransmitter.coapTransmitter(
                 sendFunc     = self.socketUdp.sendUdp,
-                srcIp        = self.ipAddress,    
+                srcIp        = self.ipAddress,
                 srcPort      = self.udpPort,
                 destIp       = destIp,
                 destPort     = destPort,
@@ -139,9 +139,9 @@ class coap(object):
             key              = (destIp,destPort,token,messageId)
             assert key not in self.transmitters.keys()
             self.transmitters[key] = newTransmitter
-        
+
         return newTransmitter.transmit()
-    
+
     def _getMessageID(self,destIp,destPort):
         '''
         \pre transmittersLock is already acquired.
@@ -159,7 +159,7 @@ class coap(object):
                 if not alreadyUsed:
                     found = True
             return messageId
-    
+
     def _getToken(self,destIp,destPort):
         '''
         \pre transmittersLock is already acquired.
@@ -177,49 +177,49 @@ class coap(object):
                 if not alreadyUsed:
                     found = True
             return token
-    
+
     def _cleanupTransmitter(self):
         with self.transmittersLock:
             for (k,v) in self.transmitters.items():
                 if not v.isAlive():
                     del self.transmitters[k]
-    
+
     #===== receive
-        
-    def _receive(self,timestamp,sender,bytes):
+
+    def _receive(self,timestamp,sender,rawbytes):
         # all UDP packets are received here
-        
+
         output  = []
         output += ['\n{0} _receive message:'.format(self.name)]
         output += ['- timestamp: {0}'.format(timestamp)]
         output += ['- sender:    {0}'.format(sender)]
-        output += ['- bytes:     {0}'.format(u.formatBuf(bytes))]
+        output += ['- bytes:     {0}'.format(u.formatBuf(rawbytes))]
         output  = '\n'.join(output)
         log.debug(output)
-        
+
         srcIp   = sender[0]
         srcIp   = u.trimAddress(srcIp)
-        
+
         srcPort = sender[1]
-        
+
         # parse messages
         try:
-            message = m.parseMessage(bytes)
+            message = m.parseMessage(rawbytes)
         except e.messageFormatError as err:
-            log.warning('malformed message {0}: {1}'.format(u.formatBuf(bytes),str(err)))
+            log.warning('malformed message {0}: {1}'.format(u.formatBuf(rawbytes),str(err)))
             return
-        
+
         # dispatch message
         try:
             if   message['code'] in d.METHOD_ALL:
                 # this is meant for a resource
-                
+
                 #==== find right resource
-                
+
                 # retrieve path
                 path = coapUri.options2path(message['options'])
                 log.debug('path="{0}"'.format(path))
-                
+
                 # find resource that matches this path
                 resource = None
                 with self.resourceLock:
@@ -228,12 +228,12 @@ class coap(object):
                             resource = r
                             break
                 log.debug('resource={0}'.format(resource))
-                
+
                 if not resource:
                     raise e.coapRcNotFound()
-                
+
                 #==== get a response
-                
+
                 # call the right resource's method
                 try:
                     if   message['code']==d.METHOD_GET:
@@ -261,9 +261,9 @@ class coap(object):
                         raise
                     else:
                         raise e.coapRcInternalServerError()
-                
+
                 #==== send back response
-                
+
                 # determine type of response packet
                 if   message['type']==d.TYPE_CON:
                     responseType = d.TYPE_ACK
@@ -271,30 +271,30 @@ class coap(object):
                     responseType = d.TYPE_NON
                 else:
                     raise SystemError('unexpected type {0}'.format(message['type']))
-                
+
                 # build response packets
                 response = m.buildMessage(
-                    type             = responseType,
+                    msgtype             = responseType,
                     token            = message['token'],
                     code             = respCode,
                     messageId        = message['messageId'],
                     options          = respOptions,
                     payload          = respPayload,
                 )
-                
+
                 # send
                 self.socketUdp.sendUdp(
                     destIp           = srcIp,
                     destPort         = srcPort,
                     msg              = response,
                 )
-                
+
             elif message['code'] in d.COAP_RC_ALL:
                 # this is meant for a transmitter
-                
+
                 # find transmitter
                 msgkey = (srcIp,srcPort,message['token'],message['messageId'])
-                
+
                 found  = False
                 with self.transmittersLock:
                     self._cleanupTransmitter()
@@ -318,15 +318,15 @@ class coap(object):
                             ','.join([str(k) for k in self.transmitters.keys()])
                         )
                     )
-            
+
             else:
                 raise NotImplementedError()
-        
+
         except e.coapRc as err:
-            
+
             # log
             log.warning(err)
-            
+
             # determine type of response packet
             if   message['type']==d.TYPE_CON:
                 responseType = d.TYPE_ACK
@@ -334,21 +334,21 @@ class coap(object):
                 responseType = d.TYPE_NON
             else:
                 raise SystemError('unexpected type {0}'.format(message['type']))
-            
+
             # build response packets
             response = m.buildMessage(
-                type             = responseType,
+                msgtype             = responseType,
                 token            = message['token'],
                 code             = err.rc,
                 messageId        = message['messageId'],
             )
-            
+
             # send
             self.socketUdp.sendUdp(
                 destIp           = srcIp,
                 destPort         = srcPort,
                 msg              = response,
             )
-        
+
         except Exception as err:
             log.critical(traceback.format_exc())
