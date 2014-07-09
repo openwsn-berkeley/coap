@@ -33,14 +33,23 @@ Default(env.Command('default', None, default))
 
 #============================ SCons targets ===================================
 
-#===== pylint
+#===== pylint_all
 
-pylint = env.Command(
+pylint_all = env.Command(
     'pylint.log', [],
     'pylint -E coap > $TARGET.file',
 )
-env.AlwaysBuild(pylint)
-env.Alias('pylint', pylint)
+env.AlwaysBuild(pylint_all)
+env.Alias('pylint_all', pylint_all)
+
+#===== pylint_error
+
+pylint_error = env.Command(
+    'pylint.log', [],
+    'pylint coap > $TARGET.file',
+)
+env.AlwaysBuild(pylint_error)
+env.Alias('pylint_error', pylint_error)
 
 #===== unittests
 
