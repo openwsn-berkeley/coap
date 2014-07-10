@@ -118,6 +118,28 @@ URIANDOPTIONS = [
             ),
         )
     ),
+    (
+        'coap://[bbbb::1415:92cc:0:3]/res/ource',
+        (
+            'bbbb::1415:92cc:0:3',
+            5683,
+            (
+                coapOption.UriPath(path='res'),
+                coapOption.UriPath(path='ource'),
+            ),
+        )
+    ),
+    (
+        'coap://[bbbb::1415:92cc:0000:0003]/res/ource',
+        (
+            'bbbb::1415:92cc:0:3',
+            5683,
+            (
+                coapOption.UriPath(path='res'),
+                coapOption.UriPath(path='ource'),
+            ),
+        )
+    ),
 ]
 
 @pytest.fixture(params=URIANDOPTIONS)
