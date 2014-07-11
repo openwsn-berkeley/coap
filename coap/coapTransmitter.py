@@ -181,7 +181,7 @@ class coapTransmitter(threading.Thread):
         with self.dataLock:
             if self.coapError:
                 assert not self.coapResponse
-                raise self.coapError
+                raise self.coapError #pylint: disable=E0702
             if self.coapResponse:
                 assert not self.coapError
                 return self.coapResponse
