@@ -273,7 +273,7 @@ def parseOption(message,previousOptionNumber):
     if   optionNumber==d.OPTION_NUM_URIPATH:
         option = UriPath(path=''.join([chr(b) for b in optionValue]))
     elif optionNumber==d.OPTION_NUM_CONTENTFORMAT:
-        option = ContentFormat(format=optionValue)
+        option = ContentFormat(cformat=optionValue)
     elif optionNumber==d.OPTION_NUM_BLOCK2:
         option = Block2(rawbytes=optionValue)
     else:
