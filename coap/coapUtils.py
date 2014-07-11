@@ -13,8 +13,8 @@ import re
 
 def trimAddress(address):
     return re.sub(
-        pattern = ':0+([0-9A-Fa-f]+)',
-        repl    = ':\1',
+        pattern = r':0+([0-9A-Fa-f]+)',
+        repl    = r':\1',
         string  = address,
     )
 
