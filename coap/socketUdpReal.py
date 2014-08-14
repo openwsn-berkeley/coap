@@ -62,6 +62,9 @@ class socketUdpReal(socketUdp.socketUdp):
         
         # send some dummy value into the socket to trigger a read
         self.socket_handler.sendto( 'stop', ('::1',self.udpPort) )
+        
+        # wait for this thread to exit
+        self.join()
     
     #======================== private =========================================
     
@@ -93,6 +96,10 @@ class socketUdpReal(socketUdp.socketUdp):
                 self.callback(timestamp,source,data)
         
         # if you get here, we are tearing down the socket
+        
+        # close the socket
+        self.socket_handler.shutdown(socket.SHUT_RDWR)
+        self.socket_handler.close()
         
         # log
         log.info("teardown")
