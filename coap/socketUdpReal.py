@@ -98,7 +98,6 @@ class socketUdpReal(socketUdp.socketUdp):
         # if you get here, we are tearing down the socket
         
         # close the socket
-        self.socket_handler.shutdown(socket.SHUT_RDWR)
         self.socket_handler.close()
         
         # log
