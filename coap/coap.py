@@ -70,22 +70,26 @@ class coap(object):
         return response['payload']
 
     def PUT(self,uri,confirmable=True,options=[],payload=None):
-        self._transmit(
+        response = self._transmit(
             uri         = uri,
             confirmable = confirmable,
             code        = d.METHOD_PUT,
             options     = options,
             payload     = payload
         )
+        log.debug('response: {0}'.format(response))
+        return response['payload']
 
     def POST(self,uri,confirmable=True,options=[],payload=None):
-        self._transmit(
+        response = self._transmit(
             uri         = uri,
             confirmable = confirmable,
             code        = d.METHOD_POST,
             options     = options,
             payload     = payload
         )
+        log.debug('response: {0}'.format(response))
+        return response['payload']
 
     def DELETE(self,uri,confirmable=True,options=[]):
         self._transmit(
