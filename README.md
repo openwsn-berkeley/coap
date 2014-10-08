@@ -1,7 +1,9 @@
 coap
 ====
 
-[![Code Health](https://landscape.io/github/openwsn-berkeley/coap/develop/landscape.png)](https://landscape.io/github/openwsn-berkeley/coap/develop)
+[![Health](https://landscape.io/github/openwsn-berkeley/coap/develop/landscape.png)](https://landscape.io/github/openwsn-berkeley/coap/develop)
+[![Travis](https://travis-ci.org/openwsn-berkeley/coap.png?branch=develop)](https://travis-ci.org/openwsn-berkeley/coap)
+[![Builder](http://builder.openwsn.org/buildStatus/icon?job=CoAP Unit Tests)](http://builder.openwsn.org/job/CoAP%20Unit%20Tests/)
 
 |              builder                                            |      build            | outcome
 | --------------------------------------------------------------- | --------------------- | -------
