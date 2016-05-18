@@ -75,19 +75,31 @@ def uri2options(uri):
     if (not host) or (not port):
         # try formats:
         #    123.123.123.123:1234
+        m = re.match('([0-9.]+):([0-9]+)',hostPort)
+        if m:
+            host   =     '::ffff:{0}'.format(m.group(1))
+            port   = int(m.group(2))
+    if (not host) or (not port):
+        # try formats:
         #    www.example.com:1234
-        m = re.match('([0-9a-zA-Z.\-\_]+):([0-9]+)',hostPort)
+        m = re.match('([0-9a-zA.\-\_]+):([0-9]+)',hostPort)
         if m:
             host   =     m.group(1)
             port   = int(m.group(2))
     if (not host) or (not port):
         # try formats:
         #    123.123.123.123
-        #    www.example.com
-        m = re.match('([0-9a-zA-Z.\-\_]+)',hostPort)
+        m = re.match('([0-9.]+)',hostPort)
         if m:
-            host   = m.group(1)
+            host   = '::ffff:{0}'.format(m.group(1))
             port   = d.DEFAULT_UDP_PORT
+    if (not host) or (not port):
+        # try formats:
+        #    www.example.com
+        m = re.match('([0-9a-zA-Z.\-\_]+)', hostPort)
+        if m:
+            host = m.group(1)
+            port = d.DEFAULT_UDP_PORT
     if (not host) or (not port):
         raise e.coapMalformattedUri('invalid host and port {0}'.format(hostPort))
     
