@@ -35,6 +35,8 @@ class socketUdpReal(socketUdp.socketUdp):
         try:
             self.socket_handler  = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
             self.socket_handler.bind((self.ipAddress,self.udpPort))
+            # Use of 41 instead of socket.IPPROTO_IPV6 because it does not exist in python 2.7 for windows
+            self.socket_handler.setsockopt(41, socket.IPV6_V6ONLY, 0)
         except socket.error as err:
             log.critical(err)
             raise
