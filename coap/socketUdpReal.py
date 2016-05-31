@@ -34,13 +34,15 @@ class socketUdpReal(socketUdp.socketUdp):
         # open UDP port
         try:
             self.socket_handler  = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
-            self.socket_handler.bind((self.ipAddress,self.udpPort))
             # Use of 41 instead of socket.IPPROTO_IPV6 because it does not exist in python 2.7 for windows
             self.socket_handler.setsockopt(41, socket.IPV6_V6ONLY, 0)
+            self.socket_handler.bind((self.ipAddress,self.udpPort))
         except socket.error as err:
             log.critical(err)
             raise
-        
+        except (AttributeError, ValueError):
+            log.info('Your system does not support dual stack sockets. IPv4 is not enabled.')
+
         # start myself
         self.start()
     
