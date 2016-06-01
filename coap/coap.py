@@ -38,6 +38,7 @@ class coap(object):
         self.transmitters         = {}
         self.ackTimeout           = d.DFLT_ACK_TIMEOUT
         self.respTimeout          = d.DFLT_RESPONSE_TIMEOUT
+        self.maxRetransmit        = d.DFLT_MAX_RETRANSMIT
         if testing:
             self.socketUdp        = socketUdpDispatcher(
                 ipAddress         = self.ipAddress,
@@ -139,6 +140,7 @@ class coap(object):
                 payload      = payload,
                 ackTimeout   = self.ackTimeout,
                 respTimeout  = self.respTimeout,
+                maxRetransmit= self.maxRetransmit
             )
             key              = (destIp,destPort,token,messageId)
             assert key not in self.transmitters.keys()
