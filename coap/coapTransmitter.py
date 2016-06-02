@@ -47,7 +47,7 @@ class coapTransmitter(threading.Thread):
         STATE_TXACK,
     ]
 
-    def __init__(self,sendFunc,srcIp,srcPort,destIp,destPort,confirmable,messageId,code,token,options,payload,ackTimeout,respTimeout):
+    def __init__(self,sendFunc,srcIp,srcPort,destIp,destPort,confirmable,messageId,code,token,options,payload,ackTimeout,respTimeout,maxRetransmit):
         '''
         \brief Initilizer function.
 
@@ -101,6 +101,7 @@ class coapTransmitter(threading.Thread):
         self.token           = token
         self.options         = options
         self.payload         = payload
+        self.maxRetransmit   = maxRetransmit
 
         # local variables
         self.dataLock        = threading.Lock()  # lock access to internal state
@@ -114,7 +115,6 @@ class coapTransmitter(threading.Thread):
         self.coapResponse    = None
         self.coapError       = None
         self.state           = self.STATE_INIT   # current state of the FSM
-        self.maxRetransmit   = d.DFLT_MAX_RETRANSMIT
         self.numTxCON        = 0
         self.ackTimeout      = ackTimeout
         self.respTimeout     = respTimeout
