@@ -9,7 +9,7 @@ with open('COPYING.txt') as f:
     LICENSE             = f.read()
 
 setup(
-    name           = "coap",
+    name           = "openwsn-coap",
     packages       = ["coap"],
     version        = VERSION,
     author         = "Thomas Watteyne",
