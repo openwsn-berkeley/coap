@@ -134,6 +134,7 @@ FORMAT_XML                             = 41
 FORMAT_OCTETSTREAM                     = 42
 FORMAT_EXI                             = 47
 FORMAT_JSON                            = 50
+FORMAT_CBOR                            = 60
 FORMAT_ALL = [
     FORMAT_TEXTPLAIN,
     FORMAT_LINKFORMAT,
@@ -141,4 +142,5 @@ FORMAT_ALL = [
     FORMAT_OCTETSTREAM,
     FORMAT_EXI,
     FORMAT_JSON,
+    FORMAT_CBOR,
 ]
