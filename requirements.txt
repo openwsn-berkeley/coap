@@ -1,2 +1,2 @@
 PyDispatcher
-pylint
+pylint==1.6.0
