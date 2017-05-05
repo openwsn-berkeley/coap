@@ -178,6 +178,18 @@ class Block2(coapOption):
 
 #=== OPTION_NUM_PROXYSCHEME
 
+#=== OPTION_NUM_OBJECT_SECURITY
+
+class ObjectSecurity(coapOption):
+
+    def __init__(self, context, ):
+        return
+
+    def __repr__(self):
+        return 'ObjectSecurity()'
+
+    def getPayloadBytes(self):
+        return []
 #============================ functions =======================================
 
 def parseOption(message,previousOptionNumber):
@@ -276,6 +288,8 @@ def parseOption(message,previousOptionNumber):
         option = ContentFormat(cformat=optionValue)
     elif optionNumber==d.OPTION_NUM_BLOCK2:
         option = Block2(rawbytes=optionValue)
+    elif optionNumber==d.OPTION_NUM_OBJECT_SECURITY:
+        option = ObjectSecurity(rawbytes=optionValue)
     else:
         raise NotImplementedError('option {0} not implemented'.format(optionNumber))
     

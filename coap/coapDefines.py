@@ -108,6 +108,7 @@ OPTION_NUM_BLOCK2                      = 23
 OPTION_NUM_BLOCK1                      = 27
 OPTION_NUM_PROXYURI                    = 35
 OPTION_NUM_PROXYSCHEME                 = 39
+OPTION_NUM_OBJECT_SECURITY             = 65025 # plugtest value
 OPTION_NUM_ALL = [
     OPTION_NUM_IFMATCH,
     OPTION_NUM_URIHOST,
@@ -125,6 +126,7 @@ OPTION_NUM_ALL = [
     OPTION_NUM_BLOCK1,
     OPTION_NUM_PROXYURI,
     OPTION_NUM_PROXYSCHEME,
+    OPTION_NUM_OBJECT_SECURITY
 ]
 
 # CoAP Content-Format Registry

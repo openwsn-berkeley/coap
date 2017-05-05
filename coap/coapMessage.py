@@ -6,10 +6,11 @@ log = logging.getLogger('coapMessage')
 log.setLevel(logging.ERROR)
 log.addHandler(NullHandler())
 
-import coapOption    as o
-import coapUtils     as u
-import coapException as e
-import coapDefines   as d
+import coapOption         as o
+import coapUtils          as u
+import coapException      as e
+import coapDefines        as d
+import coapObjectSecurity as oscoap
 
 def sortOptions(options):
     # TODO implement sorting when more options are implemented
@@ -52,6 +53,15 @@ def buildMessage(msgtype,token,code,messageId,options=[],payload=[]):
     
     # options
     options  = sortOptions(options)
+
+    # check if Object Security option is present in the options list
+    if any(isinstance(opt, o.ObjectSecurity) for opt in options):
+        payload = oscoap.protectMessage(
+            header=message,
+            options=options,
+            payload=payload
+        )
+
     lastOptionNum = 0
     for option in options:
         assert option.optionNumber>=lastOptionNum
