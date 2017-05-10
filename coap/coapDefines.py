@@ -146,3 +146,23 @@ FORMAT_ALL = [
     FORMAT_JSON,
     FORMAT_CBOR,
 ]
+
+# COSE defines for AES-CCM algorithm used in OSCoAP (c.f. draft-ietf-cose-msg-24)
+COSE_AES_CCM_16_64_128                 = 10
+COSE_AES_CCM_16_64_256                 = 11
+COSE_AES_CCM_64_64_128                 = 12
+COSE_AES_CCM_64_64_256                 = 13
+COSE_AES_CCM_16_128_128                = 30
+COSE_AES_CCM_16_128_256                = 31
+COSE_AES_CCM_64_128_128                = 32
+COSE_AES_CCM_64_128_256                = 33
+COSE_AES_CCM_ALL = [
+    COSE_AES_CCM_16_64_128,
+    COSE_AES_CCM_16_64_256,
+    COSE_AES_CCM_64_64_128,
+    COSE_AES_CCM_64_64_256,
+    COSE_AES_CCM_16_128_128,
+    COSE_AES_CCM_16_128_256,
+    COSE_AES_CCM_64_128_128,
+    COSE_AES_CCM_64_128_256,
+]
