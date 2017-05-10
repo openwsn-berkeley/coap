@@ -182,7 +182,8 @@ class Block2(coapOption):
 
 class ObjectSecurity(coapOption):
 
-    def __init__(self, context, ):
+    def __init__(self, context ):
+        self.context = context
         return
 
     def __repr__(self):
