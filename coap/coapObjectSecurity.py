@@ -10,6 +10,7 @@ import cbor
 import hkdf
 import hashlib
 import coapDefines        as d
+import coapException      as e
 
 import os
 import binascii
@@ -18,16 +19,19 @@ from Crypto.Cipher import AES
 def protectMessage(context, header, options, payload=[]):
     return payload
 
-def unprotectMessage(context):
-    return
+def unprotectMessage(message):
+    # find appropriate context
+    # decrypt message for the given context
+    # parse unencrypted message options
+    return message
 
 class CCMAlgorithm():
     def authenticateAndEncrypt(self, aad, plaintext, key, nonce):
         if self.keyLength != len(key):
-            raise ValueError("Key length mismatch.")
+            raise e.oscoapError("Key length mismatch.")
 
         if self.ivLength != len(nonce):
-            raise ValueError("IV length mismatch.")
+            raise e.oscoapError("IV length mismatch.")
 
         cipher = AES.new(key, AES.MODE_CCM, nonce, mac_len=self.tagLength)
         if aad:
@@ -48,7 +52,7 @@ class CCMAlgorithm():
             cipher.verify(digest)
             return plaintext
         except ValueError:
-            raise ValueError("Invalid tag verification.")
+            raise e.oscoapError("Invalid tag verification.")
 
 class AES_CCM_64_64_128(CCMAlgorithm):
     value       = d.COSE_AES_CCM_64_64_128
@@ -65,13 +69,14 @@ class AES_CCM_16_64_128(CCMAlgorithm):
 class SecurityContext:
     def __init__(self, masterSecret, senderID, recipientID, aeadAlgorithm = AES_CCM_64_64_128(), masterSalt = "", hashFunction = hashlib.sha256):
 
-        self.masterSecret = masterSecret
-        self.senderID = senderID
-        self.recipientID = recipientID
+        # Common context
         self.aeadAlgorithm = aeadAlgorithm
-        self.masterSalt = masterSalt
         self.hashFunction = hashFunction
+        self.masterSecret = masterSecret
+        self.masterSalt = masterSalt
 
+        # Sender context
+        self.senderID = senderID
         self.senderKey = self._hkdfDeriveParameter(self.hashFunction,
                                                    self.masterSecret,
                                                    self.masterSalt,
@@ -81,15 +86,18 @@ class SecurityContext:
                                                    self.aeadAlgorithm.keyLength
                                                    )
 
-        self.senderIV= self._hkdfDeriveParameter(self.hashFunction,
-                                                   self.masterSecret,
-                                                   self.masterSalt,
-                                                   self.senderID,
-                                                   self.aeadAlgorithm.value,
-                                                   'IV',
-                                                   self.aeadAlgorithm.ivLength
-                                                   )
+        self.senderIV = self._hkdfDeriveParameter(self.hashFunction,
+                                                  self.masterSecret,
+                                                  self.masterSalt,
+                                                  self.senderID,
+                                                  self.aeadAlgorithm.value,
+                                                  'IV',
+                                                  self.aeadAlgorithm.ivLength
+                                                  )
+        self.sequenceNumber = 0
 
+        # Recipient context
+        self.recipientID = recipientID
         self.recipientKey = self._hkdfDeriveParameter(self.hashFunction,
                                                    self.masterSecret,
                                                    self.masterSalt,
@@ -97,8 +105,7 @@ class SecurityContext:
                                                    self.aeadAlgorithm.value,
                                                    'Key',
                                                    self.aeadAlgorithm.keyLength
-                                                   )
-
+                                                      )
         self.recipientIV = self._hkdfDeriveParameter(self.hashFunction,
                                                    self.masterSecret,
                                                    self.masterSalt,
@@ -107,6 +114,7 @@ class SecurityContext:
                                                    'IV',
                                                    self.aeadAlgorithm.ivLength
                                                    )
+        self.replayWindow = []
 
     def _hkdfDeriveParameter(self, hashFunction, masterSecret, masterSalt, id, algorithm, type, length):
 
