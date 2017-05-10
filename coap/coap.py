@@ -10,12 +10,14 @@ import threading
 import random
 import traceback
 
-import coapTokenizer    as t
-import coapUtils        as u
-import coapMessage      as m
-import coapException    as e
-import coapResource     as r
-import coapDefines      as d
+import coapTokenizer        as t
+import coapUtils            as u
+import coapMessage          as m
+import coapException        as e
+import coapResource         as r
+import coapDefines          as d
+import coapOption           as o
+import coapObjectSecurity   as oscoap
 import coapUri
 import coapTransmitter
 from socketUdpDispatcher import socketUdpDispatcher
@@ -214,6 +216,13 @@ class coap(object):
         except e.messageFormatError as err:
             log.warning('malformed message {0}: {1}'.format(u.formatBuf(rawbytes),str(err)))
             return
+
+        # check if message is protected with Object-Security options and decrypt it
+        if any(isinstance(opt, o.ObjectSecurity) for opt in message['options']):
+            try:
+                message = oscoap.unprotectMessage(message)
+            except e.oscoapError as err:
+                log.warning('invalid oscoap verification {0}: {1}'.format(u.formatBuf(rawbytes), str(err)))
 
         # dispatch message
         try:
