@@ -44,37 +44,81 @@ def protectMessage(version, code, options = [], payload = []):
         # construct partialIV string that is the length of the IV
         partialIV = u.buf2str(u.int2buf(sequenceNumber, objectSecurity.context.aeadAlgorithm.ivLength))
         # strip leading zeros
-        requestSeq = partialIV.lstrip(b'\0')
+        requestSeq = partialIV.lstrip('\0')
         # construct nonce
         nonce = u.xorStrings(objectSecurity.context.senderIV, partialIV)
 
-        aad = [
+        externalAad = cbor.dumps([
             version,
             code,
             m.encodeOptions(optionsClassI),
             objectSecurity.context.aeadAlgorithm.value,
             requestKid,
             requestSeq
+        ])
+
+        # from https://tools.ietf.org/html/draft-ietf-cose-msg-24#section-5.3
+        encStructure = [
+            "Encrypt0",
+            '', # an empty byte array
+            externalAad
         ]
 
-        aadEncoded = cbor.dumps(aad)
+        aad = cbor.dumps(encStructure)
 
         ciphertext = objectSecurity.context.aeadAlgorithm.authenticateAndEncrypt(
-            aad=aadEncoded,
+            aad=aad,
             plaintext=plaintext,
             key=objectSecurity.context.senderKey,
             nonce=nonce)
 
-        ciphertext = u.str2buf(ciphertext) # convert back to list
+        # encode according to OSCOAP draft
+        finalPayload = _encodeCompressedCOSE(requestSeq, requestKid, ciphertext)
 
         if payload:
-            return optionsClassI+optionsClassU, ciphertext
+            return optionsClassI+optionsClassU, finalPayload
         else:
-            objectSecurity.setValue(ciphertext)
+            objectSecurity.setValue(finalPayload)
             return optionsClassI+optionsClassU, []
 
     else: # Object-Security option is not present, return the options and payload as-is
         return options, payload
+
+'''
+   7 6 5 4 3 2 1 0
+  +-+-+-+-+-+-+-+-+  k: kid flag bit
+  |0 0 0 0|k|pivsz|  pivsz: Partial IV size (3 bits)
+  +-+-+-+-+-+-+-+-+
+
++-------+---------+------------+-----------+
+|       | Request | Resp with- | Resp with |
+|       |         | out observe| observe   |
++-------+---------+------------+-----------+
+|     k |    1    |     0      |      0    |
+| pivsz |  > 0    |     0      |    > 0    |
++-------+---------+------------+-----------+
+
+'''
+def _encodeCompressedCOSE(partialIV, kid, ciphertext):
+    buffer = []
+
+    if kid:
+        kidFlag = 1
+    else:
+        kidFlag = 0
+
+    buffer += [ kidFlag << 3 | len(partialIV) ] # flag byte
+
+    if partialIV:
+        buffer += u.str2buf(partialIV)
+    if kid:
+        buffer += [len(kid)]
+        buffer += u.str2buf(kid)
+
+    buffer += u.str2buf(ciphertext)
+
+    return buffer
+
 
 def unprotectMessage(message):
     # decode message
@@ -147,7 +191,7 @@ class AES_CCM_16_64_128(CCMAlgorithm):
     maxSequenceNumber = 2 ** (min(ivLength * 8, 56) - 1) - 1
 
 class SecurityContext:
-    def __init__(self, masterSecret, senderID, recipientID, aeadAlgorithm = AES_CCM_64_64_128(), masterSalt = [], hashFunction = hashlib.sha256):
+    def __init__(self, masterSecret, senderID, recipientID, aeadAlgorithm = AES_CCM_64_64_128(), masterSalt = '', hashFunction = hashlib.sha256):
 
         # Common context
         self.aeadAlgorithm = aeadAlgorithm
@@ -185,7 +229,7 @@ class SecurityContext:
                                                    self.aeadAlgorithm.value,
                                                    'Key',
                                                    self.aeadAlgorithm.keyLength
-                                                      )
+                                                    )
         self.recipientIV = self._hkdfDeriveParameter(self.hashFunction,
                                                    self.masterSecret,
                                                    self.masterSalt,
