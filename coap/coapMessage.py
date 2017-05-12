@@ -54,24 +54,17 @@ def buildMessage(msgtype,token,code,messageId,options=[],payload=[]):
     # options
     options  = sortOptions(options)
 
-    # check if Object Security option is present in the options list
-    if any(isinstance(opt, o.ObjectSecurity) for opt in options):
-        payload = oscoap.protectMessage(
-            header=message,
-            options=options,
-            payload=payload
-        )
+    # invoke oscoap to protect the message if necessary
+    outerOptions, newPayload = oscoap.protectMessage(version = d.COAP_VERSION,
+                                                     code = code,
+                                                     options = options,
+                                                     payload = payload)
 
-    lastOptionNum = 0
-    for option in options:
-        assert option.optionNumber>=lastOptionNum
-        message += option.toBytes(lastOptionNum)
-        lastOptionNum = option.optionNumber
-    
-    # payload
-    if payload:
-        message += [d.COAP_PAYLOAD_MARKER]
-        message += payload
+    # add encoded options
+    message += encodeOptions(outerOptions)
+
+    # add payload
+    message += encodePayload(newPayload)
     
     return message
 
@@ -117,3 +110,18 @@ def parseMessage(message):
     log.debug('parsed message: {0}'.format(returnVal))
     
     return returnVal
+
+def encodeOptions(options, lastOptionNum=0):
+    encoded = []
+    for option in options:
+        assert option.optionNumber>=lastOptionNum
+        encoded += option.toBytes(lastOptionNum)
+        lastOptionNum = option.optionNumber
+    return encoded
+
+def encodePayload(payload):
+    encoded = []
+    if payload:
+        encoded += [d.COAP_PAYLOAD_MARKER]
+        encoded += payload
+    return encoded

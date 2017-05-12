@@ -227,7 +227,7 @@ class coap(object):
         # dispatch message
         try:
             if   message['code'] in d.METHOD_ALL:
-                # this is meant for a resource
+                # this is meant for a resource (request)
 
                 #==== find right resource
 
@@ -305,7 +305,7 @@ class coap(object):
                 )
 
             elif message['code'] in d.COAP_RC_ALL:
-                # this is meant for a transmitter
+                # this is meant for a transmitter (response)
 
                 # find transmitter
                 msgkey = (srcIp,srcPort,message['token'],message['messageId'])

@@ -3,6 +3,11 @@ COAP_VERSION                           = 1
 COAP_PAYLOAD_MARKER                    = 0xff
 COAP_SCHEME                            = 'coap://'
 
+# OSCOAP option classes
+OSCOAP_CLASS_E                         = 'E'  # encrypted and integrity protected
+OSCOAP_CLASS_I                         = 'I'  # integrity protected
+OSCOAP_CLASS_U                         = 'U'  # unprotected
+
 # Default transmission parameters
 DFLT_ACK_TIMEOUT                       = 20   # in s. 
 DFLT_ACK_RANDOM_FACTOR                 = 1.5  # ACK timeout in [DFLT_ACK_TIMEOUT..DFLT_ACK_TIMEOUT*DFLT_ACK_RANDOM_FACTOR]

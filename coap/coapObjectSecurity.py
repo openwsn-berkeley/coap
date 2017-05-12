@@ -11,19 +11,97 @@ import hkdf
 import hashlib
 import coapDefines        as d
 import coapException      as e
+import coapOption         as o
+import coapMessage        as m
+import coapUtils          as u
 
 import os
 import binascii
 from Crypto.Cipher import AES
 
-def protectMessage(context, header, options, payload=[]):
-    return payload
+def protectMessage(version, code, options = [], payload = []):
+    # check if Object Security option is present in the options list
+    objectSecurity = _objectSecurityOptionLookUp(options)
+
+    if objectSecurity: # Object-Security option is present, protect the message
+        assert objectSecurity.context
+
+        # split the options to class E (encrypted and integrity protected), I (integrity protected) and U (unprotected)
+        optionsClassE, optionsClassI, optionsClassU = _splitOptions(options)
+
+        # construct plaintext
+        plaintext = []
+        plaintext += m.encodeOptions(optionsClassE)
+        plaintext += m.encodePayload(payload)
+        plaintext = u.buf2str(plaintext) # convert to string
+
+        # construct aad
+
+        requestKid = objectSecurity.context.senderID
+
+        sequenceNumber = objectSecurity.context.getSequenceNumber()
+
+        # construct partialIV string that is the length of the IV
+        partialIV = u.buf2str(u.int2buf(sequenceNumber, objectSecurity.context.aeadAlgorithm.ivLength))
+        # strip leading zeros
+        requestSeq = partialIV.lstrip(b'\0')
+        # construct nonce
+        nonce = u.xorStrings(objectSecurity.context.senderIV, partialIV)
+
+        aad = [
+            version,
+            code,
+            m.encodeOptions(optionsClassI),
+            objectSecurity.context.aeadAlgorithm.value,
+            requestKid,
+            requestSeq
+        ]
+
+        aadEncoded = cbor.dumps(aad)
+
+        ciphertext = objectSecurity.context.aeadAlgorithm.authenticateAndEncrypt(
+            aad=aadEncoded,
+            plaintext=plaintext,
+            key=objectSecurity.context.senderKey,
+            nonce=nonce)
+
+        ciphertext = u.str2buf(ciphertext) # convert back to list
+
+        if payload:
+            return optionsClassI+optionsClassU, ciphertext
+        else:
+            objectSecurity.setValue(ciphertext)
+            return optionsClassI+optionsClassU, []
+
+    else: # Object-Security option is not present, return the options and payload as-is
+        return options, payload
 
 def unprotectMessage(message):
+    # decode message
     # find appropriate context
     # decrypt message for the given context
     # parse unencrypted message options
     return message
+
+def _objectSecurityOptionLookUp(options):
+    for option in options:
+        if isinstance(option, o.ObjectSecurity):
+            return option
+    return None
+
+def _splitOptions(options):
+    classE = []
+    classI = []
+    classU = []
+
+    for option in options:
+        if option.oscoapClass == d.OSCOAP_CLASS_E:
+            classE += [option]
+        if option.oscoapClass == d.OSCOAP_CLASS_I:
+            classI += [option]
+        if option.oscoapClass == d.OSCOAP_CLASS_U:
+            classU += [option]
+    return classE, classI, classU
 
 class CCMAlgorithm():
     def authenticateAndEncrypt(self, aad, plaintext, key, nonce):
@@ -55,19 +133,21 @@ class CCMAlgorithm():
             raise e.oscoapError("Invalid tag verification.")
 
 class AES_CCM_64_64_128(CCMAlgorithm):
-    value       = d.COSE_AES_CCM_64_64_128
-    keyLength   = 16    # 128 bits
-    ivLength    = 7
-    tagLength   = 8
+    value               = d.COSE_AES_CCM_64_64_128
+    keyLength           = 16    # 128 bits
+    ivLength            = 7
+    tagLength           = 8
+    maxSequenceNumber   = 2**(min(ivLength*8, 56) - 1) - 1
 
 class AES_CCM_16_64_128(CCMAlgorithm):
     value       = d.COSE_AES_CCM_16_64_128
     keyLength   = 16
     ivLength    = 13
     tagLength   = 8
+    maxSequenceNumber = 2 ** (min(ivLength * 8, 56) - 1) - 1
 
 class SecurityContext:
-    def __init__(self, masterSecret, senderID, recipientID, aeadAlgorithm = AES_CCM_64_64_128(), masterSalt = "", hashFunction = hashlib.sha256):
+    def __init__(self, masterSecret, senderID, recipientID, aeadAlgorithm = AES_CCM_64_64_128(), masterSalt = [], hashFunction = hashlib.sha256):
 
         # Common context
         self.aeadAlgorithm = aeadAlgorithm
@@ -115,6 +195,12 @@ class SecurityContext:
                                                    self.aeadAlgorithm.ivLength
                                                    )
         self.replayWindow = []
+
+    def getSequenceNumber(self):
+        self.sequenceNumber += 1
+        if self.sequenceNumber > self.aeadAlgorithm.maxSequenceNumber:
+            raise e.oscoapError("Reached maximum sequence number.")
+        return self.sequenceNumber
 
     def _hkdfDeriveParameter(self, hashFunction, masterSecret, masterSalt, id, algorithm, type, length):
 

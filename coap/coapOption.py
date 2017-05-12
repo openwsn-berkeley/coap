@@ -14,10 +14,11 @@ import coapDefines   as d
 
 class coapOption(object):
     
-    def __init__(self,optionNumber):
+    def __init__(self,optionNumber, oscoapClass=d.OSCOAP_CLASS_E):
         
         # store params
         self.optionNumber = optionNumber
+        self.oscoapClass  = oscoapClass
         self.length       = 0
     
     #======================== abstract methods ================================
@@ -85,7 +86,7 @@ class UriPath(coapOption):
     def __init__(self,path):
         
         # initialize parent
-        coapOption.__init__(self,d.OPTION_NUM_URIPATH)
+        coapOption.__init__(self,d.OPTION_NUM_URIPATH, d.OSCOAP_CLASS_E)
         
         # store params
         self.path = path
@@ -106,7 +107,7 @@ class ContentFormat(coapOption):
         assert cformat[0] in d.FORMAT_ALL
         
         # initialize parent
-        coapOption.__init__(self,d.OPTION_NUM_CONTENTFORMAT)
+        coapOption.__init__(self,d.OPTION_NUM_CONTENTFORMAT, d.OSCOAP_CLASS_E)
         
         # store params
         self.format = cformat[0]
@@ -141,7 +142,7 @@ class Block2(coapOption):
             assert szx!=None
         
         # initialize parent
-        coapOption.__init__(self,d.OPTION_NUM_BLOCK2)
+        coapOption.__init__(self,d.OPTION_NUM_BLOCK2, d.OSCOAP_CLASS_E)
         
         # store params
         if num:
@@ -182,15 +183,22 @@ class Block2(coapOption):
 
 class ObjectSecurity(coapOption):
 
-    def __init__(self, payload ):
-        self.payload = payload
-        return
+    def __init__(self, context):
+
+        # initialize parent
+        coapOption.__init__(self, d.OPTION_NUM_OBJECT_SECURITY, d.OSCOAP_CLASS_U)
+
+        self.context = context
+        self.value = []
 
     def __repr__(self):
         return 'ObjectSecurity()'
 
+    def setValue(self, payload):
+        self.value = payload
+
     def getPayloadBytes(self):
-        return NotImplementedError()
+        return self.value
 #============================ functions =======================================
 
 def parseOption(message,previousOptionNumber):
