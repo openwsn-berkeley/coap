@@ -183,13 +183,13 @@ class Block2(coapOption):
 
 class ObjectSecurity(coapOption):
 
-    def __init__(self, context):
+    def __init__(self, context=None, payload=[]):
 
         # initialize parent
         coapOption.__init__(self, d.OPTION_NUM_OBJECT_SECURITY, d.OSCOAP_CLASS_U)
 
         self.context = context
-        self.value = []
+        self.value = payload
 
     def __repr__(self):
         return 'ObjectSecurity()'
@@ -245,12 +245,12 @@ def parseOption(message,previousOptionNumber):
     elif optionDelta==13:
         if len(message)<1:
             raise e.messageFormatError('message to short, {0} bytes: not space for 1B optionDelta'.format(len(message)))
-        optionDelta = u.buf2int(message[0])+13
+        optionDelta = u.buf2int(message[0:1])+13
         message = message[1:]
     elif optionDelta==14:
         if len(message)<2:
             raise e.messageFormatError('message to short, {0} bytes: not space for 2B optionDelta'.format(len(message)))
-        optionDelta = u.buf2int(message[0:1])+269
+        optionDelta = u.buf2int(message[0:2])+269
         message = message[2:]
     else:
         raise e.messageFormatError('invalid optionDelta={0}'.format(optionDelta))
@@ -263,12 +263,12 @@ def parseOption(message,previousOptionNumber):
     elif optionLength==13:
         if len(message)<1:
             raise e.messageFormatError('message to short, {0} bytes: not space for 1B optionLength'.format(len(message)))
-        optionLength = u.buf2int(message[0])+13
+        optionLength = u.buf2int(message[0:1])+13
         message = message[1:]
     elif optionLength==14:
         if len(message)<2:
             raise e.messageFormatError('message to short, {0} bytes: not space for 2B optionLength'.format(len(message)))
-        optionLength = u.buf2int(message[0:1])+269
+        optionLength = u.buf2int(message[0:2])+269
         message = message[2:]
     else:
         raise e.messageFormatError('invalid optionLength={0}'.format(optionLength))
