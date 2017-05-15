@@ -19,7 +19,22 @@ import os
 import binascii
 from Crypto.Cipher import AES
 
-def protectMessage(version, code, options = [], payload = []):
+def protectMessage(version, code, options = [], payload = [], requestPartialIV = None):
+    '''
+    \brief A function which protects the outgoing CoAP message using OSCOAP.
+
+    This function protects the outgoing CoAP message determined by input parameters according to
+    draft-ietf-core-object-security-03. It expects one of the passed options to be an Object-Security
+    option with security context set. In case there is no such option in the options list, the function
+    returns the payload and options unmodified.
+    \param[in] version CoAP version field of the outgoing message.
+    \param[in] code CoAP code field of the outgoing message.
+    \param[in] options A list of options to be included in the outgoing CoAP message.
+    \param[in] payload Payload of the outgoing CoAP message.
+    \param[in] requestPartialIV Partial IV received as part of the corresponding request.
+
+    \return Outer (integrity-protected and unprotected) CoAP options, protected payload
+    '''
     # check if Object Security option is present in the options list
     objectSecurity = _objectSecurityOptionLookUp(options)
 
@@ -39,14 +54,21 @@ def protectMessage(version, code, options = [], payload = []):
 
         requestKid = objectSecurity.context.senderID
 
-        sequenceNumber = objectSecurity.context.getSequenceNumber()
+        if code in d.METHOD_ALL: # request
+            sequenceNumber = objectSecurity.context.getSequenceNumber()
 
-        # construct partialIV string that is the length of the IV
-        partialIV = u.buf2str(u.int2buf(sequenceNumber, objectSecurity.context.aeadAlgorithm.ivLength))
-        # strip leading zeros
-        requestSeq = partialIV.lstrip('\0')
-        # construct nonce
-        nonce = u.xorStrings(objectSecurity.context.senderIV, partialIV)
+            # construct partialIV string that is the length of the IV
+            partialIV = u.buf2str(u.int2buf(sequenceNumber, objectSecurity.context.aeadAlgorithm.ivLength))
+
+            # strip leading zeros
+            requestSeq = partialIV.lstrip('\0')
+            # construct nonce
+            nonce = u.xorStrings(objectSecurity.context.senderIV, partialIV)
+
+        elif code in d.COAP_RC_ALL:  # response
+            assert requestPartialIV
+            requestSeq = requestPartialIV.lstrip('\0')
+            nonce = u.xorStrings(u.flipFirstBit(objectSecurity.context.senderIV), requestPartialIV)
 
         externalAad = cbor.dumps([
             version,
@@ -60,7 +82,7 @@ def protectMessage(version, code, options = [], payload = []):
         # from https://tools.ietf.org/html/draft-ietf-cose-msg-24#section-5.3
         encStructure = [
             "Encrypt0",
-            '', # an empty byte array
+            '', # an empty string
             externalAad
         ]
 
