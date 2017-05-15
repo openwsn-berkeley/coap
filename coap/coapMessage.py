@@ -94,7 +94,7 @@ def parseMessage(message):
     returnVal['token']       = u.buf2int(message[:TKL])
     message = message[TKL:]
     
-    # options
+    # outer options
     returnVal['options']     = []
     currentOptionNumber      = 0
     while True:
@@ -103,9 +103,18 @@ def parseMessage(message):
             break
         returnVal['options']+= [option]
         currentOptionNumber  = option.optionNumber
-    
+
+
+    (innerOptions, decryptedPayload) = oscoap.unprotectMessage(version=returnVal['version'],
+                                                               code=returnVal['code'],
+                                                               options=returnVal['options'],
+                                                               payload=message)
+
+    # add protected options
+    returnVal['options'] += innerOptions
+
     # payload
-    returnVal['payload']     = message
+    returnVal['payload'] = decryptedPayload
     
     log.debug('parsed message: {0}'.format(returnVal))
     

@@ -120,6 +120,19 @@ def protectMessage(version, code, options = [], payload = [], requestPartialIV =
     else: # Object-Security option is not present, return the options and payload as-is
         return (options, payload)
 
+
+def unprotectMessage(version, code, options = [], payload = []):
+    # decode message
+    # find appropriate context
+    # decrypt message for the given context
+    # parse unencrypted message options
+    objectSecurity = _objectSecurityOptionLookUp(options)
+
+    if objectSecurity:
+        raise NotImplementedError()
+    else:
+        return ([], payload)
+
 '''
    7 6 5 4 3 2 1 0
   +-+-+-+-+-+-+-+-+  k: kid flag bit
@@ -155,13 +168,6 @@ def _encodeCompressedCOSE(partialIV, kid, ciphertext):
 
     return buffer
 
-
-def unprotectMessage(message):
-    # decode message
-    # find appropriate context
-    # decrypt message for the given context
-    # parse unencrypted message options
-    return message
 
 def _objectSecurityOptionLookUp(options):
     for option in options:
