@@ -55,10 +55,10 @@ def buildMessage(msgtype,token,code,messageId,options=[],payload=[]):
     options  = sortOptions(options)
 
     # invoke oscoap to protect the message if necessary
-    outerOptions, newPayload = oscoap.protectMessage(version = d.COAP_VERSION,
-                                                     code = code,
-                                                     options = options,
-                                                     payload = payload)
+    (outerOptions, newPayload) = oscoap.protectMessage(version = d.COAP_VERSION,
+                                                       code = code,
+                                                       options = options,
+                                                       payload = payload)
 
     # add encoded options
     message += encodeOptions(outerOptions)

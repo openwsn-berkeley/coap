@@ -33,7 +33,10 @@ def protectMessage(version, code, options = [], payload = [], requestPartialIV =
     \param[in] payload Payload of the outgoing CoAP message.
     \param[in] requestPartialIV Partial IV received as part of the corresponding request.
 
-    \return Outer (integrity-protected and unprotected) CoAP options, protected payload
+    \return A tuple with the following elements:
+        - element 0 is the list of outer (integrity-protected and unprotected) CoAP options. If no Object-Security
+        option is present, option list is returned unmodified.
+        - element 1 is the protected payload. If no Object-Security option is present, payload is returned unmodified.
     '''
     # check if Object Security option is present in the options list
     objectSecurity = _objectSecurityOptionLookUp(options)
@@ -98,13 +101,13 @@ def protectMessage(version, code, options = [], payload = [], requestPartialIV =
         finalPayload = _encodeCompressedCOSE(requestSeq, requestKid, ciphertext)
 
         if payload:
-            return optionsClassI+optionsClassU, finalPayload
+            return (optionsClassI+optionsClassU, finalPayload)
         else:
             objectSecurity.setValue(finalPayload)
-            return optionsClassI+optionsClassU, []
+            return (optionsClassI+optionsClassU, [])
 
     else: # Object-Security option is not present, return the options and payload as-is
-        return options, payload
+        return (options, payload)
 
 '''
    7 6 5 4 3 2 1 0
