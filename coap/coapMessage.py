@@ -74,7 +74,7 @@ def parseMessage(message):
     
     # header
     if len(message)<4:
-        raise e.messageFormatError('message to short, {0} bytes: not space for header'.format(len(message)))
+        raise e.messageFormatError('message too short, {0} bytes: no space for header'.format(len(message)))
     returnVal['version']     = (message[0]>>6)&0x03
     if returnVal['version']!=d.COAP_VERSION:
         raise e.messageFormatError('invalid CoAP version {0}'.format(returnVal['version']))
@@ -90,7 +90,7 @@ def parseMessage(message):
     
     # token
     if len(message)<TKL:
-        raise e.messageFormatError('message to short, {0} bytes: not space for token'.format(len(message)))
+        raise e.messageFormatError('message too short, {0} bytes: no space for token'.format(len(message)))
     returnVal['token']       = u.buf2int(message[:TKL])
     message = message[TKL:]
     

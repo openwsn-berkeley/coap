@@ -192,7 +192,7 @@ class ObjectSecurity(coapOption):
         self.value = payload
 
     def __repr__(self):
-        return 'ObjectSecurity()'
+        return 'ObjectSecurity(context={0},payload={1})'.format(self.context, self.value)
 
     def setValue(self, payload):
         self.value = payload
@@ -244,12 +244,12 @@ def parseOption(message,previousOptionNumber):
         pass
     elif optionDelta==13:
         if len(message)<1:
-            raise e.messageFormatError('message to short, {0} bytes: not space for 1B optionDelta'.format(len(message)))
+            raise e.messageFormatError('message too short, {0} bytes: no space for 1B optionDelta'.format(len(message)))
         optionDelta = u.buf2int(message[0:1])+13
         message = message[1:]
     elif optionDelta==14:
         if len(message)<2:
-            raise e.messageFormatError('message to short, {0} bytes: not space for 2B optionDelta'.format(len(message)))
+            raise e.messageFormatError('message too short, {0} bytes: no space for 2B optionDelta'.format(len(message)))
         optionDelta = u.buf2int(message[0:2])+269
         message = message[2:]
     else:
@@ -262,12 +262,12 @@ def parseOption(message,previousOptionNumber):
         pass
     elif optionLength==13:
         if len(message)<1:
-            raise e.messageFormatError('message to short, {0} bytes: not space for 1B optionLength'.format(len(message)))
+            raise e.messageFormatError('message too short, {0} bytes: no space for 1B optionLength'.format(len(message)))
         optionLength = u.buf2int(message[0:1])+13
         message = message[1:]
     elif optionLength==14:
         if len(message)<2:
-            raise e.messageFormatError('message to short, {0} bytes: not space for 2B optionLength'.format(len(message)))
+            raise e.messageFormatError('message too short, {0} bytes: no space for 2B optionLength'.format(len(message)))
         optionLength = u.buf2int(message[0:2])+269
         message = message[2:]
     else:
@@ -277,7 +277,7 @@ def parseOption(message,previousOptionNumber):
     
     # optionValue
     if len(message)<optionLength:
-        raise e.messageFormatError('message to short, {0} bytes: not space for optionValue'.format(len(message)))
+        raise e.messageFormatError('message too short, {0} bytes: no space for optionValue'.format(len(message)))
     optionValue = message[:optionLength]
     message = message[optionLength:]
     
