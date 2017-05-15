@@ -41,11 +41,18 @@ def protectMessage(version, code, options = [], payload = [], requestPartialIV =
     # check if Object Security option is present in the options list
     objectSecurity = _objectSecurityOptionLookUp(options)
 
+    if code in d.METHOD_ALL:  # request
+        isRequest = True
+    elif code in d.COAP_RC_ALL:
+        isRequest = False
+    else:
+        raise NotImplementedError()
+
     if objectSecurity: # Object-Security option is present, protect the message
         assert objectSecurity.context
 
         # split the options to class E (encrypted and integrity protected), I (integrity protected) and U (unprotected)
-        optionsClassE, optionsClassI, optionsClassU = _splitOptions(options)
+        (optionsClassE, optionsClassI, optionsClassU) = _splitOptions(options)
 
         # construct plaintext
         plaintext = []
@@ -57,7 +64,7 @@ def protectMessage(version, code, options = [], payload = [], requestPartialIV =
 
         requestKid = objectSecurity.context.senderID
 
-        if code in d.METHOD_ALL: # request
+        if isRequest:
             sequenceNumber = objectSecurity.context.getSequenceNumber()
 
             # construct partialIV string that is the length of the IV
@@ -68,7 +75,7 @@ def protectMessage(version, code, options = [], payload = [], requestPartialIV =
             # construct nonce
             nonce = u.xorStrings(objectSecurity.context.senderIV, partialIV)
 
-        elif code in d.COAP_RC_ALL:  # response
+        else:   # response
             assert requestPartialIV
             requestSeq = requestPartialIV.lstrip('\0')
             nonce = u.xorStrings(u.flipFirstBit(objectSecurity.context.senderIV), requestPartialIV)
@@ -97,6 +104,10 @@ def protectMessage(version, code, options = [], payload = [], requestPartialIV =
             key=objectSecurity.context.senderKey,
             nonce=nonce)
 
+        if not isRequest: # do not encode sequence number and kid in the response
+            requestSeq = []
+            requestKid = []
+
         # encode according to OSCOAP draft
         finalPayload = _encodeCompressedCOSE(requestSeq, requestKid, ciphertext)
 
@@ -115,13 +126,13 @@ def protectMessage(version, code, options = [], payload = [], requestPartialIV =
   |0 0 0 0|k|pivsz|  pivsz: Partial IV size (3 bits)
   +-+-+-+-+-+-+-+-+
 
-+-------+---------+------------+-----------+
-|       | Request | Resp with- | Resp with |
-|       |         | out observe| observe   |
-+-------+---------+------------+-----------+
-|     k |    1    |     0      |      0    |
-| pivsz |  > 0    |     0      |    > 0    |
-+-------+---------+------------+-----------+
++-------+---------+------------+
+|       | Request | Resp with- |
+|       |         | out observe|
++-------+---------+------------+
+|     k |    1    |     0      |
+| pivsz |  > 0    |     0      |
++-------+---------+------------+
 
 '''
 def _encodeCompressedCOSE(partialIV, kid, ciphertext):
@@ -170,7 +181,7 @@ def _splitOptions(options):
             classI += [option]
         if option.oscoapClass == d.OSCOAP_CLASS_U:
             classU += [option]
-    return classE, classI, classU
+    return (classE, classI, classU)
 
 class CCMAlgorithm():
     def authenticateAndEncrypt(self, aad, plaintext, key, nonce):
