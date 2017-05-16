@@ -104,17 +104,16 @@ def parseMessage(message):
         returnVal['options']+= [option]
         currentOptionNumber  = option.optionNumber
 
+    # payload or encoded ciphertext
+    payload = message
 
-    (innerOptions, decryptedPayload) = oscoap.unprotectMessage(version=returnVal['version'],
-                                                               code=returnVal['code'],
-                                                               options=returnVal['options'],
-                                                               payload=message)
+    objectSecurity = oscoap.objectSecurityOptionLookUp(returnVal['options'])
+    if objectSecurity:
+        oscoapDict = oscoap.parseObjectSecurity(objectSecurity.getPayloadBytes(), payload)
+        returnVal.update(oscoapDict)
+    else:
+        returnVal['payload'] = payload
 
-    # add protected options
-    returnVal['options'] += innerOptions
-
-    # payload
-    returnVal['payload'] = decryptedPayload
     
     log.debug('parsed message: {0}'.format(returnVal))
     

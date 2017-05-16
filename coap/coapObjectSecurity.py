@@ -39,7 +39,7 @@ def protectMessage(version, code, options = [], payload = [], requestPartialIV =
         - element 1 is the protected payload. If no Object-Security option is present, payload is returned unmodified.
     '''
     # check if Object Security option is present in the options list
-    objectSecurity = _objectSecurityOptionLookUp(options)
+    objectSecurity = objectSecurityOptionLookUp(options)
 
     if code in d.METHOD_ALL:  # request
         isRequest = True
@@ -126,12 +126,48 @@ def unprotectMessage(version, code, options = [], payload = []):
     # find appropriate context
     # decrypt message for the given context
     # parse unencrypted message options
-    objectSecurity = _objectSecurityOptionLookUp(options)
+    objectSecurity = objectSecurityOptionLookUp(options)
 
     if objectSecurity:
         raise NotImplementedError()
     else:
         return ([], payload)
+
+def parseObjectSecurity(optionValue, payload):
+    if optionValue and payload:
+        raise e.messageFormatError('invalid oscoap message, both payload and value are set.')
+    elif optionValue:
+        buffer = optionValue
+    elif payload:
+        buffer = payload
+    else:
+        raise e.messageFormatError('invalid oscoap message. no value or payload found.')
+
+    returnVal = {}
+
+    # decode first byte
+    pivsz = (buffer[0] >> 0) & 0x07
+    k = (buffer[0] >> 3) & 0x01
+    reserved = (buffer[0] >> 4) & 0x0f
+
+    if reserved:
+        raise e.messageFormatError('invalid oscoap message. reserved bits set.')
+
+    buffer = buffer[1:]
+
+    if pivsz:
+        returnVal['partialIV'] = buffer[:pivsz]
+        buffer = buffer[pivsz:]
+
+    if k:
+        kidLength = buffer[0]
+        buffer = buffer[1:]
+        returnVal['kid'] = buffer[:kidLength]
+        buffer = buffer[kidLength:]
+
+    returnVal['ciphertext'] = buffer
+
+    return returnVal
 
 '''
    7 6 5 4 3 2 1 0
@@ -169,7 +205,7 @@ def _encodeCompressedCOSE(partialIV, kid, ciphertext):
     return buffer
 
 
-def _objectSecurityOptionLookUp(options):
+def objectSecurityOptionLookUp(options):
     for option in options:
         if isinstance(option, o.ObjectSecurity):
             return option
