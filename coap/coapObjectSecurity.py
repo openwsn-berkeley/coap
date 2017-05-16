@@ -121,7 +121,7 @@ def protectMessage(version, code, options = [], payload = [], requestPartialIV =
         return (options, payload)
 
 
-def unprotectMessage(context, version, code, options = [], ciphertext = []):
+def unprotectMessage(context, version, code, requestKid, requestSeq, options = [], ciphertext = []):
     # decode message
     # find appropriate context
     # decrypt message for the given context

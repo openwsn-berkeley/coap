@@ -257,6 +257,8 @@ class coap(object):
                         (innerOptions, plaintext) = oscoap.unprotectMessage(context,
                                                                           version=message['version'],
                                                                           code=message['code'],
+                                                                          requestKid=message['kid'],
+                                                                          requestSeq=message['partialIV'],
                                                                           options=message['options'],
                                                                           ciphertext=message['ciphertext'])
                     except e.oscoapError as err:
