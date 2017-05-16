@@ -36,6 +36,7 @@ class coap(object):
         self.resourceLock         = threading.Lock()
         self.tokenizer            = t.coapTokenizer()
         self.resources            = []
+        self.securityBindings     = []
         self.transmittersLock     = threading.RLock()
         self.transmitters         = {}
         self.ackTimeout           = d.DFLT_ACK_TIMEOUT
@@ -111,6 +112,22 @@ class coap(object):
 
         with self.resourceLock:
             self.resources += [newResource]
+
+    def addSecurityContextBinding(self, bindings):
+        assert isinstance(bindings, list)
+
+        for binding in bindings:
+            (resource, context, authorizedMethods) = binding
+            assert isinstance(resource, r.coapResource)
+            assert isinstance(context, oscoap.SecurityContext)
+            assert isinstance(authorizedMethods, str)
+
+            log.debug('{0} adding security binding for resource={1}, context={2}, authorized methods={3}'.format(self.name,
+                                                                                                                 resource.path,
+                                                                                                                 context,
+                                                                                                                 authorizedMethods))
+            with self.resourceLock:
+                self.securityBindings += [binding]
 
     #======================== private =========================================
 
@@ -217,22 +234,44 @@ class coap(object):
             log.warning('malformed message {0}: {1}'.format(u.formatBuf(rawbytes),str(err)))
             return
 
-        # check if message is protected with Object-Security options and decrypt it
-        if any(isinstance(opt, o.ObjectSecurity) for opt in message['options']):
-            try:
-                message = oscoap.unprotectMessage(message)
-            except e.oscoapError as err:
-                log.warning('invalid oscoap verification {0}: {1}'.format(u.formatBuf(rawbytes), str(err)))
-
         # dispatch message
         try:
             if   message['code'] in d.METHOD_ALL:
                 # this is meant for a resource (request)
 
+                #==== decrypt message if encrypted
+                options = []
+                if 'ciphertext' in message.keys():
+                    # retrieve security context
+                    secBinding = self._securityContextBindingLookup(u.buf2str(message['kid']))
+
+                    if not secBinding:
+                        raise e.coapRcUnauthorized('Security context not found.')
+
+                    # before decrypting we don't know what resource this request is meant for
+                    (resource, context, authorizedMethods) = secBinding
+
+
+                    # decrypt the message
+                    try:
+                        (innerOptions, plaintext) = oscoap.unprotectMessage(context,
+                                                                          version=message['version'],
+                                                                          code=message['code'],
+                                                                          options=message['options'],
+                                                                          ciphertext=message['ciphertext'])
+                    except e.oscoapError as err:
+                        raise e.coapRcBadRequest('OSCOAP unprotect failed: {0}'.format(str(err)))
+
+                    payload = plaintext
+                else: # message not encrypted
+                    payload = message['payload']
+
+                options = message['options'] + innerOptions
+
                 #==== find right resource
 
                 # retrieve path
-                path = coapUri.options2path(message['options'])
+                path = coapUri.options2path(options)
                 log.debug('path="{0}"'.format(path))
 
                 # find resource that matches this path
@@ -253,21 +292,21 @@ class coap(object):
                 try:
                     if   message['code']==d.METHOD_GET:
                         (respCode,respOptions,respPayload) = resource.GET(
-                            options=message['options']
+                            options=options
                         )
                     elif message['code']==d.METHOD_POST:
                         (respCode,respOptions,respPayload) = resource.POST(
-                            options=message['options'],
-                            payload=message['payload']
+                            options=options,
+                            payload=payload
                         )
                     elif message['code']==d.METHOD_PUT:
                         (respCode,respOptions,respPayload) = resource.PUT(
-                            options=message['options'],
-                            payload=message['payload']
+                            options=options,
+                            payload=payload
                         )
                     elif message['code']==d.METHOD_DELETE:
                         (respCode,respOptions,respPayload) = resource.DELETE(
-                            options=message['options']
+                            options=options
                         )
                     else:
                         raise SystemError('unexpected code {0}'.format(message['code']))
@@ -367,3 +406,11 @@ class coap(object):
 
         except Exception as err:
             log.critical(traceback.format_exc())
+
+    def _securityContextBindingLookup(self, keyID):
+        with self.resourceLock:
+            for binding in self.securityBindings:
+                (resource, context, authorizedMethods) = binding
+                if context.recipientID == keyID:
+                    return binding
+            return None

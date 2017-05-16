@@ -121,17 +121,14 @@ def protectMessage(version, code, options = [], payload = [], requestPartialIV =
         return (options, payload)
 
 
-def unprotectMessage(version, code, options = [], payload = []):
+def unprotectMessage(context, version, code, options = [], ciphertext = []):
     # decode message
     # find appropriate context
     # decrypt message for the given context
     # parse unencrypted message options
-    objectSecurity = objectSecurityOptionLookUp(options)
+    assert objectSecurityOptionLookUp(options)
 
-    if objectSecurity:
-        raise NotImplementedError()
-    else:
-        return ([], payload)
+    return ([], ciphertext)
 
 def parseObjectSecurity(optionValue, payload):
     if optionValue and payload:

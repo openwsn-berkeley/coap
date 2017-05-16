@@ -107,6 +107,7 @@ def parseMessage(message):
     # payload or encoded ciphertext
     payload = message
 
+    # if object security option is present decode the value in order to be able to decrypt the message
     objectSecurity = oscoap.objectSecurityOptionLookUp(returnVal['options'])
     if objectSecurity:
         oscoapDict = oscoap.parseObjectSecurity(objectSecurity.getPayloadBytes(), payload)
