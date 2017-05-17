@@ -240,7 +240,7 @@ class coap(object):
                 # this is meant for a resource (request)
 
                 #==== decrypt message if encrypted
-                options = []
+                innerOptions = []
                 if 'ciphertext' in message.keys():
                     # retrieve security context
                     secBinding = self._securityContextBindingLookup(u.buf2str(message['kid']))
@@ -257,8 +257,8 @@ class coap(object):
                         (innerOptions, plaintext) = oscoap.unprotectMessage(context,
                                                                           version=message['version'],
                                                                           code=message['code'],
-                                                                          requestKid=message['kid'],
-                                                                          requestSeq=message['partialIV'],
+                                                                          requestKid=u.buf2str(message['kid']),
+                                                                          requestSeq=u.buf2str(message['partialIV']),
                                                                           options=message['options'],
                                                                           ciphertext=message['ciphertext'])
                     except e.oscoapError as err:
