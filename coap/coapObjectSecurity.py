@@ -266,6 +266,7 @@ class AES_CCM_16_64_128(CCMAlgorithm):
     maxSequenceNumber = 2 ** (min(ivLength * 8, 56) - 1) - 1
 
 class SecurityContext:
+    REPLAY_WINDOW_SIZE = 64
     def __init__(self, masterSecret, senderID, recipientID, aeadAlgorithm = AES_CCM_64_64_128(), masterSalt = '', hashFunction = hashlib.sha256):
 
         # Common context
@@ -313,13 +314,31 @@ class SecurityContext:
                                                    'IV',
                                                    self.aeadAlgorithm.ivLength
                                                    )
-        self.replayWindow = []
+        self.replayWindow = [0]
 
     def getSequenceNumber(self):
         self.sequenceNumber += 1
         if self.sequenceNumber > self.aeadAlgorithm.maxSequenceNumber:
             raise e.oscoapError("Reached maximum sequence number.")
         return self.sequenceNumber
+
+    def replayWindowLookup(self, sequenceNumber):
+        if sequenceNumber in self.replayWindow:
+            return False
+
+        if sequenceNumber < min(self.replayWindow):
+            return False
+
+        return True
+
+    def replayWindowUpdate(self, sequenceNumber):
+        assert sequenceNumber > min(self.replayWindow)
+
+        if len(self.replayWindow) == self.REPLAY_WINDOW_SIZE:
+            self.replayWindow.remove(min(self.replayWindow))
+
+        self.replayWindow += [sequenceNumber]
+
 
     def _hkdfDeriveParameter(self, hashFunction, masterSecret, masterSalt, id, algorithm, type, length):
 
