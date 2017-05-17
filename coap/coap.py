@@ -36,7 +36,6 @@ class coap(object):
         self.resourceLock         = threading.Lock()
         self.tokenizer            = t.coapTokenizer()
         self.resources            = []
-        self.securityBindings     = []
         self.transmittersLock     = threading.RLock()
         self.transmitters         = {}
         self.ackTimeout           = d.DFLT_ACK_TIMEOUT
@@ -112,22 +111,6 @@ class coap(object):
 
         with self.resourceLock:
             self.resources += [newResource]
-
-    def addSecurityContextBinding(self, bindings):
-        assert isinstance(bindings, list)
-
-        for binding in bindings:
-            (resource, context, authorizedMethods) = binding
-            assert isinstance(resource, r.coapResource)
-            assert isinstance(context, oscoap.SecurityContext)
-            assert isinstance(authorizedMethods, str)
-
-            log.debug('{0} adding security binding for resource={1}, context={2}, authorized methods={3}'.format(self.name,
-                                                                                                                 resource.path,
-                                                                                                                 context,
-                                                                                                                 authorizedMethods))
-            with self.resourceLock:
-                self.securityBindings += [binding]
 
     #======================== private =========================================
 
@@ -241,20 +224,19 @@ class coap(object):
 
                 #==== decrypt message if encrypted
                 innerOptions = []
+                blindContext = None
                 if 'ciphertext' in message.keys():
                     # retrieve security context
-                    secBinding = self._securityContextBindingLookup(u.buf2str(message['kid']))
-
-                    if not secBinding:
-                        raise e.coapRcUnauthorized('Security context not found.')
-
                     # before decrypting we don't know what resource this request is meant for
-                    (resource, context, authorizedMethods) = secBinding
+                    # so we take the first binding with the correct context (recipientID)
+                    blindContext = self._securityContextLookup(u.buf2str(message['kid']))
 
+                    if not blindContext:
+                        raise e.coapRcUnauthorized('Security context not found.')
 
                     # decrypt the message
                     try:
-                        (innerOptions, plaintext) = oscoap.unprotectMessage(context,
+                        (innerOptions, plaintext) = oscoap.unprotectMessage(blindContext,
                                                                           version=message['version'],
                                                                           code=message['code'],
                                                                           requestKid=u.buf2str(message['kid']),
@@ -287,6 +269,12 @@ class coap(object):
 
                 if not resource:
                     raise e.coapRcNotFound()
+
+                #==== check if appropriate security context was used for the resource
+                (context, authorizedMethods) = resource.getSecurityBinding()
+
+                if context != blindContext:
+                    raise e.coapRcUnauthorized('Unappropriate security context for the given resource')
 
                 #==== get a response
 
@@ -409,10 +397,9 @@ class coap(object):
         except Exception as err:
             log.critical(traceback.format_exc())
 
-    def _securityContextBindingLookup(self, keyID):
+    def _securityContextLookup(self, keyID):
         with self.resourceLock:
-            for binding in self.securityBindings:
-                (resource, context, authorizedMethods) = binding
-                if context.recipientID == keyID:
-                    return binding
-            return None
+            for r in self.resources:
+                (ctx, authzMethods) = r.getSecurityBinding()
+                if keyID == ctx.recipientID:
+                    return ctx
