@@ -143,7 +143,8 @@ def unprotectMessage(context, version, code, requestKid, requestSeq, options = [
 
     context.replayWindowUpdate(requestSeq)
 
-    return ([], ciphertext)
+    # returns a tuple (innerOptions, payload)
+    return m.decodeOptionsAndPayload(u.str2buf(plaintext))
 
 def parseObjectSecurity(optionValue, payload):
     if optionValue and payload:
