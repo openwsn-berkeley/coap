@@ -233,10 +233,10 @@ def _splitOptions(options):
 class CCMAlgorithm():
     def authenticateAndEncrypt(self, aad, plaintext, key, nonce):
         if self.keyLength != len(key):
-            raise e.oscoapError("Key length mismatch.")
+            raise e.oscoapError('Key length mismatch.')
 
         if self.ivLength != len(nonce):
-            raise e.oscoapError("IV length mismatch.")
+            raise e.oscoapError('IV length mismatch.')
 
         cipher = AES.new(key, AES.MODE_CCM, nonce, mac_len=self.tagLength)
         if aad:
@@ -257,7 +257,7 @@ class CCMAlgorithm():
             cipher.verify(digest)
             return plaintext
         except ValueError:
-            raise e.oscoapError("Invalid tag verification.")
+            raise e.oscoapError('Invalid tag verification.')
 
 class AES_CCM_64_64_128(CCMAlgorithm):
     value               = d.COSE_AES_CCM_64_64_128
@@ -327,7 +327,7 @@ class SecurityContext:
     def getSequenceNumber(self):
         self.sequenceNumber += 1
         if self.sequenceNumber > self.aeadAlgorithm.maxSequenceNumber:
-            raise e.oscoapError("Reached maximum sequence number.")
+            raise e.oscoapError('Reached maximum sequence number.')
         return self.sequenceNumber
 
     def replayWindowLookup(self, sequenceNumber):
