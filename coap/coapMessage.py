@@ -94,18 +94,8 @@ def parseMessage(message):
     returnVal['token']       = u.buf2int(message[:TKL])
     message = message[TKL:]
     
-    # outer options
-    returnVal['options']     = []
-    currentOptionNumber      = 0
-    while True:
-        (option,message)     = o.parseOption(message,currentOptionNumber)
-        if not option:
-            break
-        returnVal['options']+= [option]
-        currentOptionNumber  = option.optionNumber
-
-    # payload or encoded ciphertext
-    payload = message
+    # outer options and payload/ciphertext
+    (returnVal['options'], payload) = decodeOptionsAndPayload(message)
 
     # if object security option is present decode the value in order to be able to decrypt the message
     objectSecurity = oscoap.objectSecurityOptionLookUp(returnVal['options'])
@@ -127,6 +117,17 @@ def encodeOptions(options, lastOptionNum=0):
         encoded += option.toBytes(lastOptionNum)
         lastOptionNum = option.optionNumber
     return encoded
+
+def decodeOptionsAndPayload(rawbytes, currentOptionNumber = 0):
+    options = []
+    while True:
+        (option,rawbytes)     = o.parseOption(rawbytes, currentOptionNumber)
+        if not option:
+            break
+        options += [option]
+        currentOptionNumber  = option.optionNumber
+
+    return (options, rawbytes)
 
 def encodePayload(payload):
     encoded = []
