@@ -80,23 +80,12 @@ def protectMessage(version, code, options = [], payload = [], requestPartialIV =
             requestSeq = requestPartialIV.lstrip('\0')
             nonce = u.xorStrings(u.flipFirstBit(objectSecurity.context.senderIV), requestPartialIV)
 
-        externalAad = cbor.dumps([
-            version,
-            code,
-            m.encodeOptions(optionsClassI),
-            objectSecurity.context.aeadAlgorithm.value,
-            requestKid,
-            requestSeq
-        ])
-
-        # from https://tools.ietf.org/html/draft-ietf-cose-msg-24#section-5.3
-        encStructure = [
-            "Encrypt0",
-            '', # an empty string
-            externalAad
-        ]
-
-        aad = cbor.dumps(encStructure)
+        aad = _constructAAD(version,
+                            code,
+                            m.encodeOptions(optionsClassI),
+                            objectSecurity.context.aeadAlgorithm.value,
+                            requestKid,
+                            requestSeq)
 
         ciphertext = objectSecurity.context.aeadAlgorithm.authenticateAndEncrypt(
             aad=aad,
@@ -166,6 +155,12 @@ def parseObjectSecurity(optionValue, payload):
 
     return returnVal
 
+def objectSecurityOptionLookUp(options):
+    for option in options:
+        if isinstance(option, o.ObjectSecurity):
+            return option
+    return None
+
 '''
    7 6 5 4 3 2 1 0
   +-+-+-+-+-+-+-+-+  k: kid flag bit
@@ -201,12 +196,25 @@ def _encodeCompressedCOSE(partialIV, kid, ciphertext):
 
     return buffer
 
+def _constructAAD(version, code, optionsSerialized, aeadAlgorithm, requestKid, requestSeq):
 
-def objectSecurityOptionLookUp(options):
-    for option in options:
-        if isinstance(option, o.ObjectSecurity):
-            return option
-    return None
+    externalAad = cbor.dumps([
+        version,
+        code,
+        optionsSerialized,
+        aeadAlgorithm,
+        requestKid,
+        requestSeq
+    ])
+
+    # from https://tools.ietf.org/html/draft-ietf-cose-msg-24#section-5.3
+    encStructure = [
+        'Encrypt0',
+        '',  # an empty string
+        externalAad
+    ]
+
+    return cbor.dumps(encStructure)
 
 def _splitOptions(options):
     classE = []
