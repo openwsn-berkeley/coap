@@ -111,11 +111,37 @@ def protectMessage(version, code, options = [], payload = [], requestPartialIV =
 
 
 def unprotectMessage(context, version, code, requestKid, requestSeq, options = [], ciphertext = []):
-    # decode message
-    # find appropriate context
     # decrypt message for the given context
     # parse unencrypted message options
     assert objectSecurityOptionLookUp(options)
+
+    (optionsClassE, optionsClassI, optionsClassU) = _splitOptions(options)
+
+    if optionsClassE:
+        raise e.messageFormatError('invalid oscoap message. E-class option present in the outer message')
+
+    if not context.replayWindowLookup(requestSeq):
+        raise e.oscoapError('Replay protection failed')
+
+    aad = _constructAAD(version,
+                        code,
+                        m.encodeOptions(optionsClassI),
+                        context.aeadAlgorithm.value,
+                        requestKid,
+                        requestSeq)
+
+    partialIV = u.zeroPadString(requestSeq, context.aeadAlgorithm.ivLength) # pad requestSeq with zeros up to ivLength
+
+    # construct nonce
+    nonce = u.xorStrings(context.recipientIV, partialIV)
+
+    plaintext = context.aeadAlgorithm.authenticateAndDecrypt(
+        aad=aad,
+        ciphertext=u.buf2str(ciphertext),
+        key=context.recipientKey,
+        nonce=nonce)
+
+    context.replayWindowUpdate(requestSeq)
 
     return ([], ciphertext)
 
