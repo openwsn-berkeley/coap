@@ -78,7 +78,10 @@ def protectMessage(version, code, options = [], payload = [], requestPartialIV =
         else:   # response
             assert requestPartialIV
             requestSeq = requestPartialIV.lstrip('\0')
-            nonce = u.xorStrings(u.flipFirstBit(objectSecurity.context.senderIV), requestPartialIV)
+            nonce = u.xorStrings(
+                u.flipFirstBit(objectSecurity.context.senderIV),
+                u.zeroPadString(requestPartialIV, objectSecurity.context.aeadAlgorithm.ivLength)
+            )
 
         aad = _constructAAD(version,
                             code,

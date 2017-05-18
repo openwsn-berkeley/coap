@@ -225,11 +225,13 @@ class coap(object):
                 #==== decrypt message if encrypted
                 innerOptions = []
                 blindContext = None
+                requestPartialIV = None
                 if 'ciphertext' in message.keys():
                     # retrieve security context
                     # before decrypting we don't know what resource this request is meant for
                     # so we take the first binding with the correct context (recipientID)
                     blindContext = self._securityContextLookup(u.buf2str(message['kid']))
+                    requestPartialIV = u.buf2str(message['partialIV'])
 
                     if not blindContext:
                         raise e.coapRcUnauthorized('Security context not found.')
@@ -240,7 +242,7 @@ class coap(object):
                                                                           version=message['version'],
                                                                           code=message['code'],
                                                                           requestKid=u.buf2str(message['kid']),
-                                                                          requestSeq=u.buf2str(message['partialIV']),
+                                                                          requestSeq=requestPartialIV,
                                                                           options=message['options'],
                                                                           ciphertext=message['ciphertext'])
                     except e.oscoapError as err:
@@ -318,14 +320,22 @@ class coap(object):
                 else:
                     raise SystemError('unexpected type {0}'.format(message['type']))
 
-                # build response packets
+                # if resource is protected with a security context, add Object-Security option
+                if context:
+                    # verify that the Object-Security option was not set by the resource handler
+                    assert not any(isinstance(option, o.ObjectSecurity) for option in respOptions)
+                    objectSecurity = o.ObjectSecurity(context=context)
+                    respOptions += [objectSecurity]
+
+                # build response packets and pass partialIV from the request for OSCOAP's processing
                 response = m.buildMessage(
-                    msgtype             = responseType,
+                    msgtype          = responseType,
                     token            = message['token'],
                     code             = respCode,
                     messageId        = message['messageId'],
                     options          = respOptions,
                     payload          = respPayload,
+                    requestPartialIV = requestPartialIV
                 )
 
                 # send

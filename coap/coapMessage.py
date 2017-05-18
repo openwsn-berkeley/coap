@@ -30,7 +30,7 @@ def sortOptions(options):
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 '''
 
-def buildMessage(msgtype,token,code,messageId,options=[],payload=[]):
+def buildMessage(msgtype,token,code,messageId,options=[],payload=[], requestPartialIV=None):
     assert msgtype in d.TYPE_ALL
     assert code in d.METHOD_ALL+d.COAP_RC_ALL
     
@@ -58,7 +58,8 @@ def buildMessage(msgtype,token,code,messageId,options=[],payload=[]):
     (outerOptions, newPayload) = oscoap.protectMessage(version = d.COAP_VERSION,
                                                        code = code,
                                                        options = options,
-                                                       payload = payload)
+                                                       payload = payload,
+                                                       requestPartialIV=requestPartialIV)
 
     # add encoded options
     message += encodeOptions(outerOptions)
