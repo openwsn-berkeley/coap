@@ -274,32 +274,34 @@ class coap(object):
                 (context, authorizedMethods) = resource.getSecurityBinding()
 
                 if context != blindContext:
-                    raise e.coapRcUnauthorized('Unappropriate security context for the given resource')
+                    raise e.coapRcUnauthorized('Unauthorized security context for the given resource')
 
                 #==== get a response
 
                 # call the right resource's method
                 try:
-                    if   message['code']==d.METHOD_GET:
+                    if   message['code']==d.METHOD_GET and d.METHOD_GET in authorizedMethods:
                         (respCode,respOptions,respPayload) = resource.GET(
                             options=options
                         )
-                    elif message['code']==d.METHOD_POST:
+                    elif message['code']==d.METHOD_POST and d.METHOD_POST in authorizedMethods:
                         (respCode,respOptions,respPayload) = resource.POST(
                             options=options,
                             payload=payload
                         )
-                    elif message['code']==d.METHOD_PUT:
+                    elif message['code']==d.METHOD_PUT and d.METHOD_PUT in authorizedMethods:
                         (respCode,respOptions,respPayload) = resource.PUT(
                             options=options,
                             payload=payload
                         )
-                    elif message['code']==d.METHOD_DELETE:
+                    elif message['code']==d.METHOD_DELETE and d.METHOD_DELETE in authorizedMethods:
                         (respCode,respOptions,respPayload) = resource.DELETE(
                             options=options
                         )
-                    else:
+                    elif message['code'] not in d.METHOD_ALL:
                         raise SystemError('unexpected code {0}'.format(message['code']))
+                    else:
+                        raise e.coapRcUnauthorized('Unauthorized method for the given resource')
                 except Exception as err:
                     if isinstance(err,e.coapRc):
                         raise

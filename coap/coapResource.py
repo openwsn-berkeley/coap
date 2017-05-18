@@ -7,6 +7,7 @@ log.setLevel(logging.ERROR)
 log.addHandler(NullHandler())
 
 import coapException        as e
+import coapDefines          as d
 import coapObjectSecurity   as oscoap
 
 class coapResource(object):
@@ -48,7 +49,9 @@ class coapResource(object):
     def addSecurityBinding(self, binding):
         (ctx, authorizedMethods) = binding
         assert isinstance(ctx, oscoap.SecurityContext)
-        assert isinstance(authorizedMethods, str)
+        assert isinstance(authorizedMethods, list)
+        for method in authorizedMethods:
+            assert method in d.METHOD_ALL
 
         log.debug('adding security binding for resource={0}, context={1}, authorized methods={2}'.format(self.path,
                                                                                                          ctx,
@@ -60,5 +63,6 @@ class coapResource(object):
         if self.securityBinding:
             return self.securityBinding
         else:
-            return (None, None)
+            # if no context is bound to the resource, all methods are authorized
+            return (None, d.METHOD_ALL)
 
