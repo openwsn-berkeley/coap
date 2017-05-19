@@ -24,9 +24,7 @@ def protectMessage(context, version, code, options = [], payload = [], partialIV
     \brief A function which protects the outgoing CoAP message using OSCOAP.
 
     This function protects the outgoing CoAP message determined by input parameters according to
-    draft-ietf-core-object-security-03. It expects one of the passed options to be an Object-Security
-    option with security context set. In case there is no such option in the options list, the function
-    returns the payload and options unmodified.
+    draft-ietf-core-object-security-03.
     \param[in] Security context to use to protect the outgoing message.
     \param[in] version CoAP version field of the outgoing message.
     \param[in] code CoAP code field of the outgoing message.
@@ -36,9 +34,8 @@ def protectMessage(context, version, code, options = [], payload = [], partialIV
     corresponding request to protect the response. Expected string of length given by the context algorithm.
 
     \return A tuple with the following elements:
-        - element 0 is the list of outer (integrity-protected and unprotected) CoAP options. If no Object-Security
-        option is present, option list is returned unmodified.
-        - element 1 is the protected payload. If no Object-Security option is present, payload is returned unmodified.
+        - element 0 is the list of outer (integrity-protected and unprotected) CoAP options.
+        - element 1 is the protected payload.
     '''
 
     # split the options to class E (encrypted and integrity protected), I (integrity protected) and U (unprotected)
@@ -90,8 +87,24 @@ def protectMessage(context, version, code, options = [], payload = [], partialIV
         return (optionsClassI+optionsClassU, [])
 
 def unprotectMessage(context, version, code, options = [], ciphertext = [], partialIV=None):
-    # decrypt message for the given context
-    # parse unencrypted message options
+    '''
+    \brief A function which verifies and decrypts the incoming CoAP message using OSCOAP.
+
+    This function verifies the incoming CoAP message determined by input parameters according to
+    draft-ietf-core-object-security-03.
+    \param[in] Security context to use to verify+decrypt the outgoing message.
+    \param[in] version CoAP version field of the incoming message.
+    \param[in] code CoAP code field of the incoming message.
+    \param[in] options A list of 'outer' options that are not encrypted.
+    \param[in] ciphertext Ciphertext of the incoming CoAP message.
+    \param[in] partialIV In case of request, partialIV corresponds to the one parsed from the message. In case
+     of response, it corresponds to the appropriate partialIV used in request. Expected string of length given
+     by the context algorithm.
+
+    \return A tuple with the following elements:
+        - element 0 is the list of inner (encrypted) CoAP options.
+        - element 1 is the decrypted payload.
+    '''
     assert objectSecurityOptionLookUp(options)
 
     (optionsClassE, optionsClassI, optionsClassU) = _splitOptions(options)
@@ -263,6 +276,26 @@ def _isRequest(code):
         raise NotImplementedError()
 
 class CCMAlgorithm():
+
+    #======================== abstract members ================================
+
+    def value(self):
+        raise NotImplementedError
+
+    def keyLength(self):
+        raise NotImplementedError
+
+    def ivLength(self):
+        raise NotImplementedError
+
+    def tagLength(self):
+        raise NotImplementedError
+
+    def maxSequenceNumber(self):
+        raise NotImplementedError
+
+    # ======================== public ==========================================
+
     def authenticateAndEncrypt(self, aad, plaintext, key, nonce):
         if self.keyLength != len(key):
             raise e.oscoapError('Key length mismatch.')
@@ -356,6 +389,8 @@ class SecurityContext:
                                                    )
         self.replayWindow = [0]
 
+    # ======================== public ==========================================
+
     def getSequenceNumber(self):
         self.sequenceNumber += 1
         if self.sequenceNumber > self.aeadAlgorithm.maxSequenceNumber:
@@ -382,6 +417,7 @@ class SecurityContext:
 
         self.replayWindow += [sequenceNumber]
 
+    # ======================== private ==========================================
 
     def _hkdfDeriveParameter(self, hashFunction, masterSecret, masterSalt, id, algorithm, type, length):
 
