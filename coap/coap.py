@@ -123,7 +123,7 @@ class coap(object):
         assert type(uri)==str
 
         (destIp,destPort,uriOptions) = coapUri.uri2options(uri)
-        (context, sequenceNumber) = oscoap.getRequestSecurityParams(oscoap.objectSecurityOptionLookUp(options))
+        (securityContext, sequenceNumber) = oscoap.getRequestSecurityParams(oscoap.objectSecurityOptionLookUp(options))
 
         with self.transmittersLock:
             self._cleanupTransmitter()
@@ -141,7 +141,7 @@ class coap(object):
                 token           = token,
                 options         = uriOptions+options,
                 payload         = payload,
-                securityContext = context,
+                securityContext = securityContext,
                 requestSeq      = sequenceNumber,
                 ackTimeout      = self.ackTimeout,
                 respTimeout     = self.respTimeout,
@@ -151,7 +151,23 @@ class coap(object):
             assert key not in self.transmitters.keys()
             self.transmitters[key] = newTransmitter
 
-        return newTransmitter.transmit()
+        response = newTransmitter.transmit()
+
+        if securityContext:
+            try:
+                (innerOptions, plaintext) = oscoap.unprotectMessage(securityContext,
+                                                                    version=response['version'],
+                                                                    code=response['code'],
+                                                                    options=response['options'],
+                                                                    ciphertext=response['ciphertext'],
+                                                                    partialIV=sequenceNumber,
+                                                                    )
+                response['options'] = response['options'] + innerOptions
+                response['payload'] = plaintext
+            except e.oscoapError:
+                raise
+
+        return response
 
     def _getMessageID(self,destIp,destPort):
         '''

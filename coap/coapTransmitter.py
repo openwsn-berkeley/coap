@@ -14,7 +14,6 @@ import coapDefines          as d
 import coapException        as e
 import coapUtils            as u
 import coapMessage          as m
-import coapObjectSecurity   as oscoap
 
 class coapTransmitter(threading.Thread):
     '''
@@ -209,23 +208,8 @@ class coapTransmitter(threading.Thread):
         if message['code'] not in d.METHOD_ALL+d.COAP_RC_ALL_SUCCESS:
             message = e.coapRcFactory(message['code'])
 
-        # decrypt and store packet
+        # store packet
         with self.dataLock:
-            if self.securityContext:
-                try:
-                    (innerOptions, plaintext) = oscoap.unprotectMessage(self.securityContext,
-                                                                        version=message['version'],
-                                                                        code=message['code'],
-                                                                        options=message['options'],
-                                                                        ciphertext=message['ciphertext'],
-                                                                        partialIV=self.requestSeq,
-                                                                        )
-                    message['options'] = message['options'] + innerOptions
-                    message['payload'] = plaintext
-                except e.oscoapError:
-                    # invalidate payload but continue with the FSM
-                    message['payload'] = []
-                    message['ciphertext'] = []
             self.LastRxPacket = (timestamp,srcIp,srcPort,message)
 
         # signal reception
