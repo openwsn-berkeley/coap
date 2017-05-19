@@ -19,7 +19,7 @@ import os
 import binascii
 from Crypto.Cipher import AES
 
-def protectMessage(version, code, options = [], payload = [], requestPartialIV = None):
+def protectMessage(context, version, code, options = [], payload = [], partialIV = None):
     '''
     \brief A function which protects the outgoing CoAP message using OSCOAP.
 
@@ -27,93 +27,74 @@ def protectMessage(version, code, options = [], payload = [], requestPartialIV =
     draft-ietf-core-object-security-03. It expects one of the passed options to be an Object-Security
     option with security context set. In case there is no such option in the options list, the function
     returns the payload and options unmodified.
+    \param[in] Security context to use to protect the outgoing message.
     \param[in] version CoAP version field of the outgoing message.
     \param[in] code CoAP code field of the outgoing message.
     \param[in] options A list of options to be included in the outgoing CoAP message.
     \param[in] payload Payload of the outgoing CoAP message.
-    \param[in] requestPartialIV Partial IV received as part of the corresponding request.
+    \param[in] partialIV Partial IV either to be used to protect the request or the one received as part of the
+    corresponding request to protect the response. Expected string of length given by the context algorithm.
 
     \return A tuple with the following elements:
         - element 0 is the list of outer (integrity-protected and unprotected) CoAP options. If no Object-Security
         option is present, option list is returned unmodified.
         - element 1 is the protected payload. If no Object-Security option is present, payload is returned unmodified.
     '''
-    # check if Object Security option is present in the options list
-    objectSecurity = objectSecurityOptionLookUp(options)
 
-    if code in d.METHOD_ALL:  # request
-        isRequest = True
-    elif code in d.COAP_RC_ALL:
-        isRequest = False
+    # split the options to class E (encrypted and integrity protected), I (integrity protected) and U (unprotected)
+    (optionsClassE, optionsClassI, optionsClassU) = _splitOptions(options)
+
+    objectSecurityOption = objectSecurityOptionLookUp(options)
+
+    # construct plaintext
+    plaintext = []
+    plaintext += m.encodeOptions(optionsClassE)
+    plaintext += m.encodePayload(payload)
+    plaintext = u.buf2str(plaintext) # convert to string
+
+    # construct aad
+
+    requestKid = context.senderID
+    requestSeq = partialIV.lstrip('\0')
+
+    # construct nonce
+    if _isRequest(code):
+        nonce = u.xorStrings(context.senderIV, partialIV)
+    else:   # response
+        nonce = u.xorStrings(u.flipFirstBit(context.senderIV), partialIV)
+
+    aad = _constructAAD(version,
+                        code,
+                        m.encodeOptions(optionsClassI),
+                        context.aeadAlgorithm.value,
+                        requestKid,
+                        requestSeq)
+
+    ciphertext = context.aeadAlgorithm.authenticateAndEncrypt(
+        aad=aad,
+        plaintext=plaintext,
+        key=context.senderKey,
+        nonce=nonce)
+
+    print binascii.hexlify(aad)
+    print binascii.hexlify(ciphertext)
+    print binascii.hexlify(context.senderKey)
+    print binascii.hexlify(nonce)
+
+    if not _isRequest(code): # do not encode sequence number and kid in the response
+        requestSeq = []
+        requestKid = []
+
+    # encode according to OSCOAP draft
+    finalPayload = _encodeCompressedCOSE(requestSeq, requestKid, ciphertext)
+
+    if payload:
+        return (optionsClassI+optionsClassU, finalPayload)
     else:
-        raise NotImplementedError()
+        objectSecurityOption.setValue(finalPayload)
+        return (optionsClassI+optionsClassU, [])
 
-    if objectSecurity: # Object-Security option is present, protect the message
-        assert objectSecurity.context
-
-        # split the options to class E (encrypted and integrity protected), I (integrity protected) and U (unprotected)
-        (optionsClassE, optionsClassI, optionsClassU) = _splitOptions(options)
-
-        # construct plaintext
-        plaintext = []
-        plaintext += m.encodeOptions(optionsClassE)
-        plaintext += m.encodePayload(payload)
-        plaintext = u.buf2str(plaintext) # convert to string
-
-        # construct aad
-
-        requestKid = objectSecurity.context.senderID
-
-        if isRequest:
-            sequenceNumber = objectSecurity.context.getSequenceNumber()
-
-            # construct partialIV string that is the length of the IV
-            partialIV = u.buf2str(u.int2buf(sequenceNumber, objectSecurity.context.aeadAlgorithm.ivLength))
-
-            # strip leading zeros
-            requestSeq = partialIV.lstrip('\0')
-            # construct nonce
-            nonce = u.xorStrings(objectSecurity.context.senderIV, partialIV)
-
-        else:   # response
-            assert requestPartialIV
-            requestSeq = requestPartialIV.lstrip('\0')
-            nonce = u.xorStrings(
-                u.flipFirstBit(objectSecurity.context.senderIV),
-                u.zeroPadString(requestPartialIV, objectSecurity.context.aeadAlgorithm.ivLength)
-            )
-
-        aad = _constructAAD(version,
-                            code,
-                            m.encodeOptions(optionsClassI),
-                            objectSecurity.context.aeadAlgorithm.value,
-                            requestKid,
-                            requestSeq)
-
-        ciphertext = objectSecurity.context.aeadAlgorithm.authenticateAndEncrypt(
-            aad=aad,
-            plaintext=plaintext,
-            key=objectSecurity.context.senderKey,
-            nonce=nonce)
-
-        if not isRequest: # do not encode sequence number and kid in the response
-            requestSeq = []
-            requestKid = []
-
-        # encode according to OSCOAP draft
-        finalPayload = _encodeCompressedCOSE(requestSeq, requestKid, ciphertext)
-
-        if payload:
-            return (optionsClassI+optionsClassU, finalPayload)
-        else:
-            objectSecurity.setValue(finalPayload)
-            return (optionsClassI+optionsClassU, [])
-
-    else: # Object-Security option is not present, return the options and payload as-is
-        return (options, payload)
-
-
-def unprotectMessage(context, version, code, requestKid, requestSeq, options = [], ciphertext = []):
+def unprotectMessage(context, version, code, options = [], ciphertext = [], partialIV=None):
     # decrypt message for the given context
     # parse unencrypted message options
     assert objectSecurityOptionLookUp(options)
@@ -123,28 +104,41 @@ def unprotectMessage(context, version, code, requestKid, requestSeq, options = [
     if optionsClassE:
         raise e.messageFormatError('invalid oscoap message. E-class option present in the outer message')
 
-    if not context.replayWindowLookup(requestSeq):
-        raise e.oscoapError('Replay protection failed')
+    if _isRequest(code):
+        if not context.replayWindowLookup(u.buf2str(u.str2buf(partialIV))):
+            raise e.oscoapError('Replay protection failed')
+
+    requestSeq = partialIV.lstrip('\0')
 
     aad = _constructAAD(version,
                         code,
                         m.encodeOptions(optionsClassI),
                         context.aeadAlgorithm.value,
-                        requestKid,
+                        context.recipientID,
                         requestSeq)
 
-    partialIV = u.zeroPadString(requestSeq, context.aeadAlgorithm.ivLength) # pad requestSeq with zeros up to ivLength
-
     # construct nonce
-    nonce = u.xorStrings(context.recipientIV, partialIV)
+    if _isRequest(code): # verifying request
+        nonce = u.xorStrings(context.recipientIV, partialIV)
+    else: # verifying response
+        nonce = u.xorStrings(u.flipFirstBit(context.recipientIV), partialIV)
 
-    plaintext = context.aeadAlgorithm.authenticateAndDecrypt(
-        aad=aad,
-        ciphertext=u.buf2str(ciphertext),
-        key=context.recipientKey,
-        nonce=nonce)
+    print binascii.hexlify(aad)
+    print binascii.hexlify(u.buf2str(ciphertext))
+    print binascii.hexlify(context.recipientKey)
+    print binascii.hexlify(nonce)
 
-    context.replayWindowUpdate(requestSeq)
+    try:
+        plaintext = context.aeadAlgorithm.authenticateAndDecrypt(
+            aad=aad,
+            ciphertext=u.buf2str(ciphertext),
+            key=context.recipientKey,
+            nonce=nonce)
+    except e.oscoapError:
+        raise
+
+    if _isRequest(code):
+        context.replayWindowUpdate(requestSeq)
 
     # returns a tuple (innerOptions, payload)
     return m.decodeOptionsAndPayload(u.str2buf(plaintext))
@@ -184,6 +178,16 @@ def parseObjectSecurity(optionValue, payload):
     returnVal['ciphertext'] = buffer
 
     return returnVal
+
+def getRequestSecurityParams(objectSecurityOption):
+    if objectSecurityOption:
+        context = objectSecurityOption.context
+        newSequenceNumber = objectSecurityOption.context.getSequenceNumber()
+        # convert sequence number to string that is the length of the IV
+        newSequenceNumber = u.buf2str(u.int2buf(newSequenceNumber, context.aeadAlgorithm.ivLength))
+        return (context, newSequenceNumber)
+    else:
+        return (None, None)
 
 def objectSecurityOptionLookUp(options):
     for option in options:
@@ -259,6 +263,14 @@ def _splitOptions(options):
         if option.oscoapClass == d.OSCOAP_CLASS_U:
             classU += [option]
     return (classE, classI, classU)
+
+def _isRequest(code):
+    if code in d.METHOD_ALL:  # request
+        return True
+    elif code in d.COAP_RC_ALL:
+        return False
+    else:
+        raise NotImplementedError()
 
 class CCMAlgorithm():
     def authenticateAndEncrypt(self, aad, plaintext, key, nonce):
@@ -359,6 +371,9 @@ class SecurityContext:
         if self.sequenceNumber > self.aeadAlgorithm.maxSequenceNumber:
             raise e.oscoapError('Reached maximum sequence number.')
         return self.sequenceNumber
+
+    def getIVLength(self):
+        return self.aeadAlgorithm.ivLength
 
     def replayWindowLookup(self, sequenceNumber):
         if sequenceNumber in self.replayWindow:
