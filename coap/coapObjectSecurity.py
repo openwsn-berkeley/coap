@@ -76,11 +76,6 @@ def protectMessage(context, version, code, options = [], payload = [], partialIV
         key=context.senderKey,
         nonce=nonce)
 
-    print binascii.hexlify(aad)
-    print binascii.hexlify(ciphertext)
-    print binascii.hexlify(context.senderKey)
-    print binascii.hexlify(nonce)
-
     if not _isRequest(code): # do not encode sequence number and kid in the response
         requestSeq = []
         requestKid = []
@@ -122,11 +117,6 @@ def unprotectMessage(context, version, code, options = [], ciphertext = [], part
         nonce = u.xorStrings(context.recipientIV, partialIV)
     else: # verifying response
         nonce = u.xorStrings(u.flipFirstBit(context.recipientIV), partialIV)
-
-    print binascii.hexlify(aad)
-    print binascii.hexlify(u.buf2str(ciphertext))
-    print binascii.hexlify(context.recipientKey)
-    print binascii.hexlify(nonce)
 
     try:
         plaintext = context.aeadAlgorithm.authenticateAndDecrypt(

@@ -385,7 +385,6 @@ class coap(object):
                                 )
                             ):
                             found = True
-                            # oscoap unprotect is called within the FSM
                             v.receiveMessage(timestamp,srcIp,srcPort,message)
                             break
                 if found==False:
