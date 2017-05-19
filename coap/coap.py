@@ -123,26 +123,29 @@ class coap(object):
         assert type(uri)==str
 
         (destIp,destPort,uriOptions) = coapUri.uri2options(uri)
+        (context, sequenceNumber) = oscoap.getRequestSecurityParams(oscoap.objectSecurityOptionLookUp(options))
 
         with self.transmittersLock:
             self._cleanupTransmitter()
-            messageId        = self._getMessageID(destIp,destPort)
-            token            = self._getToken(destIp,destPort)
-            newTransmitter   = coapTransmitter.coapTransmitter(
-                sendFunc     = self.socketUdp.sendUdp,
-                srcIp        = self.ipAddress,
-                srcPort      = self.udpPort,
-                destIp       = destIp,
-                destPort     = destPort,
-                confirmable  = confirmable,
-                messageId    = messageId,
-                code         = code,
-                token        = token,
-                options      = uriOptions+options,
-                payload      = payload,
-                ackTimeout   = self.ackTimeout,
-                respTimeout  = self.respTimeout,
-                maxRetransmit= self.maxRetransmit
+            messageId           = self._getMessageID(destIp,destPort)
+            token               = self._getToken(destIp,destPort)
+            newTransmitter      = coapTransmitter.coapTransmitter(
+                sendFunc        = self.socketUdp.sendUdp,
+                srcIp           = self.ipAddress,
+                srcPort         = self.udpPort,
+                destIp          = destIp,
+                destPort        = destPort,
+                confirmable     = confirmable,
+                messageId       = messageId,
+                code            = code,
+                token           = token,
+                options         = uriOptions+options,
+                payload         = payload,
+                securityContext = context,
+                requestSeq      = sequenceNumber,
+                ackTimeout      = self.ackTimeout,
+                respTimeout     = self.respTimeout,
+                maxRetransmit   = self.maxRetransmit
             )
             key              = (destIp,destPort,token,messageId)
             assert key not in self.transmitters.keys()
@@ -231,7 +234,7 @@ class coap(object):
                     # before decrypting we don't know what resource this request is meant for
                     # so we take the first binding with the correct context (recipientID)
                     blindContext = self._securityContextLookup(u.buf2str(message['kid']))
-                    requestPartialIV = u.buf2str(message['partialIV'])
+                    requestPartialIV = u.zeroPadString(u.buf2str(message['partialIV']), blindContext.getIVLength())
 
                     if not blindContext:
                         raise e.coapRcUnauthorized('Security context not found.')
@@ -241,10 +244,10 @@ class coap(object):
                         (innerOptions, plaintext) = oscoap.unprotectMessage(blindContext,
                                                                           version=message['version'],
                                                                           code=message['code'],
-                                                                          requestKid=u.buf2str(message['kid']),
-                                                                          requestSeq=requestPartialIV,
                                                                           options=message['options'],
-                                                                          ciphertext=message['ciphertext'])
+                                                                          ciphertext=message['ciphertext'],
+                                                                          partialIV=requestPartialIV
+                                                                            )
                     except e.oscoapError as err:
                         raise e.coapRcBadRequest('OSCOAP unprotect failed: {0}'.format(str(err)))
 
@@ -335,7 +338,8 @@ class coap(object):
                     messageId        = message['messageId'],
                     options          = respOptions,
                     payload          = respPayload,
-                    requestPartialIV = requestPartialIV
+                    securityContext  = context,
+                    partialIV        = requestPartialIV
                 )
 
                 # send
@@ -365,6 +369,7 @@ class coap(object):
                                 )
                             ):
                             found = True
+                            # oscoap unprotect is called within the FSM
                             v.receiveMessage(timestamp,srcIp,srcPort,message)
                             break
                 if found==False:
