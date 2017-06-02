@@ -250,10 +250,11 @@ class coap(object):
                     # before decrypting we don't know what resource this request is meant for
                     # so we take the first binding with the correct context (recipientID)
                     blindContext = self._securityContextLookup(u.buf2str(message['kid']))
-                    requestPartialIV = u.zeroPadString(u.buf2str(message['partialIV']), blindContext.getIVLength())
 
                     if not blindContext:
                         raise e.coapRcUnauthorized('Security context not found.')
+
+                    requestPartialIV = u.zeroPadString(u.buf2str(message['partialIV']), blindContext.getIVLength())
 
                     # decrypt the message
                     try:
