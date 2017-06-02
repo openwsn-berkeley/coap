@@ -166,7 +166,7 @@ SECURITYFIXTURE = [
     True,
 ]
 
-@pytest.fixture(params=SECURITYFIXTURE, scope='module')
+@pytest.fixture(params=SECURITYFIXTURE, scope='function')
 def twoEndPoints(request):
     
     # start two coap endpoints
