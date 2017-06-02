@@ -113,7 +113,7 @@ def unprotectMessage(context, version, code, options = [], ciphertext = [], part
         raise e.messageFormatError('invalid oscoap message. E-class option present in the outer message')
 
     if _isRequest(code):
-        if not context.replayWindowLookup(u.buf2str(u.str2buf(partialIV))):
+        if not context.replayWindowLookup(u.buf2int(u.str2buf(partialIV))):
             raise e.oscoapError('Replay protection failed')
 
     requestSeq = partialIV.lstrip('\0')
@@ -141,7 +141,7 @@ def unprotectMessage(context, version, code, options = [], ciphertext = [], part
         raise
 
     if _isRequest(code):
-        context.replayWindowUpdate(requestSeq)
+        context.replayWindowUpdate(u.buf2int(u.str2buf(partialIV)))
 
     # returns a tuple (innerOptions, payload)
     return m.decodeOptionsAndPayload(u.str2buf(plaintext))
@@ -411,6 +411,7 @@ class SecurityContext:
 
     def replayWindowUpdate(self, sequenceNumber):
         assert sequenceNumber > min(self.replayWindow)
+        assert sequenceNumber not in self.replayWindow
 
         if len(self.replayWindow) == self.REPLAY_WINDOW_SIZE:
             self.replayWindow.remove(min(self.replayWindow))
