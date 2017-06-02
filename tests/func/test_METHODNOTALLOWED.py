@@ -26,7 +26,7 @@ log.addHandler(utils.NullHandler())
 
 #============================ tests ===========================================
 
-def test_NOTFOUND(logFixture,snoopyDispatcher,twoEndPoints,confirmableFixture):
+def test_METHODNOTALLOWED(logFixture,snoopyDispatcher,twoEndPoints,confirmableFixture):
     
     (coap1,coap2, securityEnabled) = twoEndPoints
 
