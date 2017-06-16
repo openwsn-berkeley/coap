@@ -15,7 +15,6 @@ import coapOption         as o
 import coapMessage        as m
 import coapUtils          as u
 
-import os
 import binascii
 from Crypto.Cipher import AES
 
@@ -329,7 +328,7 @@ class AES_CCM_64_64_128(CCMAlgorithm):
     keyLength           = 16    # 128 bits
     ivLength            = 7
     tagLength           = 8
-    maxSequenceNumber   = 2**(min(ivLength*8, 56) - 1) - 1
+    maxSequenceNumber   = 2 ** (min(ivLength*8, 56) - 1) - 1
 
 class AES_CCM_16_64_128(CCMAlgorithm):
     value       = d.COSE_AES_CCM_16_64_128
