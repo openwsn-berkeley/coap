@@ -424,7 +424,7 @@ class SecurityContext:
         info = cbor.dumps([
             id,
             algorithm,
-            type,
+            unicode(type), # encode as text string
             length
         ])
 
