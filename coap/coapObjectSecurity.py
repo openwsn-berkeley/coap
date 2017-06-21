@@ -245,8 +245,8 @@ def _constructAAD(version, code, optionsSerialized, aeadAlgorithm, requestKid, r
 
     # from https://tools.ietf.org/html/draft-ietf-cose-msg-24#section-5.3
     encStructure = [
-        'Encrypt0',
-        '',  # an empty string
+        unicode('Encrypt0'),
+        '',  # an empty byte string
         externalAad
     ]
 
