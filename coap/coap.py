@@ -434,5 +434,7 @@ class coap(object):
         with self.resourceLock:
             for r in self.resources:
                 (ctx, authzMethods) = r.getSecurityBinding()
-                if keyID == ctx.recipientID:
-                    return ctx
+                if ctx:
+                    if keyID == ctx.recipientID:
+                        return ctx
+            return None
