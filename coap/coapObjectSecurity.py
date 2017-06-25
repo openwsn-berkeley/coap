@@ -61,7 +61,7 @@ def protectMessage(context, version, code, options = [], payload = [], partialIV
 
     aad = _constructAAD(version,
                         code,
-                        m.encodeOptions(optionsClassI),
+                        u.buf2str(m.encodeOptions(optionsClassI)),
                         context.aeadAlgorithm.value,
                         requestKid,
                         requestSeq)
@@ -119,7 +119,7 @@ def unprotectMessage(context, version, code, options = [], ciphertext = [], part
 
     aad = _constructAAD(version,
                         code,
-                        m.encodeOptions(optionsClassI),
+                        u.buf2str(m.encodeOptions(optionsClassI)),
                         context.aeadAlgorithm.value,
                         context.recipientID,
                         requestSeq)
