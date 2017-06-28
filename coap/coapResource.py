@@ -48,7 +48,6 @@ class coapResource(object):
 
     def addSecurityBinding(self, binding):
         (ctx, authorizedMethods) = binding
-        assert isinstance(ctx, oscoap.SecurityContext)
         assert isinstance(authorizedMethods, list)
         for method in authorizedMethods:
             assert method in d.METHOD_ALL

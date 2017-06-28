@@ -41,6 +41,7 @@ class coap(object):
         self.ackTimeout           = d.DFLT_ACK_TIMEOUT
         self.respTimeout          = d.DFLT_RESPONSE_TIMEOUT
         self.maxRetransmit        = d.DFLT_MAX_RETRANSMIT
+        self.secContextHandler    = None
         if testing:
             self.socketUdp        = socketUdpDispatcher(
                 ipAddress         = self.ipAddress,
@@ -111,6 +112,9 @@ class coap(object):
 
         with self.resourceLock:
             self.resources += [newResource]
+
+    def addSecurityContextHandler(self, cb):
+        self.secContextHandler = cb
 
     #======================== private =========================================
 
@@ -243,7 +247,7 @@ class coap(object):
 
                 #==== decrypt message if encrypted
                 innerOptions = []
-                blindContext = None
+                foundContext = None
                 requestPartialIV = None
                 if 'ciphertext' in message.keys():
                     # retrieve security context
@@ -252,13 +256,20 @@ class coap(object):
                     blindContext = self._securityContextLookup(u.buf2str(message['kid']))
 
                     if not blindContext:
-                        raise e.coapRcUnauthorized('Security context not found.')
+                        if self.secContextHandler:
+                            appContext = self.secContextHandler(u.buf2str(message['kid']))
+                            if not appContext:
+                                raise e.coapRcUnauthorized('Security context not found.')
+                        else:
+                            raise e.coapRcUnauthorized('Security context not found.')
 
-                    requestPartialIV = u.zeroPadString(u.buf2str(message['partialIV']), blindContext.getIVLength())
+                    foundContext = blindContext if blindContext != None else appContext
+
+                    requestPartialIV = u.zeroPadString(u.buf2str(message['partialIV']), foundContext.getIVLength())
 
                     # decrypt the message
                     try:
-                        (innerOptions, plaintext) = oscoap.unprotectMessage(blindContext,
+                        (innerOptions, plaintext) = oscoap.unprotectMessage(foundContext,
                                                                           version=message['version'],
                                                                           code=message['code'],
                                                                           options=message['options'],
@@ -295,8 +306,9 @@ class coap(object):
                 #==== check if appropriate security context was used for the resource
                 (context, authorizedMethods) = resource.getSecurityBinding()
 
-                if context != blindContext:
-                    raise e.coapRcUnauthorized('Unauthorized security context for the given resource')
+                if context is not None:
+                    if context != foundContext:
+                        raise e.coapRcUnauthorized('Unauthorized security context for the given resource')
 
                 #==== get a response
 
@@ -341,10 +353,10 @@ class coap(object):
                     raise SystemError('unexpected type {0}'.format(message['type']))
 
                 # if resource is protected with a security context, add Object-Security option
-                if context:
+                if foundContext:
                     # verify that the Object-Security option was not set by the resource handler
                     assert not any(isinstance(option, o.ObjectSecurity) for option in respOptions)
-                    objectSecurity = o.ObjectSecurity(context=context)
+                    objectSecurity = o.ObjectSecurity(context=foundContext)
                     respOptions += [objectSecurity]
 
                 # build response packets and pass partialIV from the request for OSCOAP's processing
@@ -355,7 +367,7 @@ class coap(object):
                     messageId        = message['messageId'],
                     options          = respOptions,
                     payload          = respPayload,
-                    securityContext  = context,
+                    securityContext  = foundContext,
                     partialIV        = requestPartialIV
                 )
 
