@@ -71,6 +71,20 @@ class coapOption(object):
 
 #=== OPTION_NUM_URIHOST
 
+class UriHost(coapOption):
+    def __init__(self, host):
+        # initialize parent
+        coapOption.__init__(self, d.OPTION_NUM_URIHOST, d.OSCOAP_CLASS_U)
+
+        # store params
+        self.host = host
+
+    def __repr__(self):
+        return 'UriHost(host={0})'.format(self.host)
+
+    def getPayloadBytes(self):
+        return [ord(b) for b in self.host]
+
 #=== OPTION_NUM_ETAG
 
 #=== OPTION_NUM_IFNONEMATCH
@@ -178,6 +192,20 @@ class Block2(coapOption):
 #=== OPTION_NUM_PROXYURI
 
 #=== OPTION_NUM_PROXYSCHEME
+
+class ProxyScheme(coapOption):
+    def __init__(self, scheme):
+        # initialize parent
+        coapOption.__init__(self, d.OPTION_NUM_PROXYSCHEME, d.OSCOAP_CLASS_U)
+
+        # store params
+        self.scheme = scheme
+
+    def __repr__(self):
+        return 'ProxyScheme(scheme={0})'.format(self.scheme)
+
+    def getPayloadBytes(self):
+        return [ord(b) for b in self.scheme]
 
 #=== OPTION_NUM_OBJECT_SECURITY
 
@@ -290,8 +318,10 @@ def parseOption(message,previousOptionNumber):
     
     if optionNumber not in d.OPTION_NUM_ALL:
         raise e.messageFormatError('invalid option number {0} (0x{0:x})'.format(optionNumber))
-    
-    if   optionNumber==d.OPTION_NUM_URIPATH:
+
+    if optionNumber==d.OPTION_NUM_URIHOST:
+        option = UriHost(host=''.join([chr(b) for b in optionValue]))
+    elif optionNumber==d.OPTION_NUM_URIPATH:
         option = UriPath(path=''.join([chr(b) for b in optionValue]))
     elif optionNumber==d.OPTION_NUM_CONTENTFORMAT:
         option = ContentFormat(cformat=optionValue)
@@ -299,6 +329,8 @@ def parseOption(message,previousOptionNumber):
         option = Block2(rawbytes=optionValue)
     elif optionNumber==d.OPTION_NUM_OBJECT_SECURITY:
         option = ObjectSecurity(payload=optionValue)
+    elif optionNumber==d.OPTION_NUM_PROXYSCHEME:
+        option = ProxyScheme(scheme=''.join([chr(b) for b in optionValue]))
     else:
         raise NotImplementedError('option {0} not implemented'.format(optionNumber))
     
