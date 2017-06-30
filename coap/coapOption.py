@@ -227,6 +227,22 @@ class ObjectSecurity(coapOption):
 
     def getPayloadBytes(self):
         return self.value
+
+# === OPTION_NUM_STATELESSPROXY
+
+class StatelessProxy(coapOption):
+    def __init__(self, value):
+        # initialize parent
+        coapOption.__init__(self, d.OPTION_NUM_STATELESSPROXY, d.OSCOAP_CLASS_U)
+
+        # store params
+        self.opaqueValue = value
+
+    def __repr__(self):
+        return 'StatelessProxy(value={0})'.format(self.opaqueValue)
+
+    def getPayloadBytes(self):
+        return self.opaqueValue
 #============================ functions =======================================
 
 def parseOption(message,previousOptionNumber):
@@ -331,6 +347,8 @@ def parseOption(message,previousOptionNumber):
         option = ObjectSecurity(payload=optionValue)
     elif optionNumber==d.OPTION_NUM_PROXYSCHEME:
         option = ProxyScheme(scheme=''.join([chr(b) for b in optionValue]))
+    elif optionNumber==d.OPTION_NUM_STATELESSPROXY:
+        option = StatelessProxy(value=optionValue)
     else:
         raise NotImplementedError('option {0} not implemented'.format(optionNumber))
     

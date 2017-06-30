@@ -233,6 +233,8 @@ class coap(object):
 
         srcPort = sender[1]
 
+        options = []
+
         # parse messages
         try:
             message = m.parseMessage(rawbytes)
@@ -359,6 +361,12 @@ class coap(object):
                     objectSecurity = o.ObjectSecurity(context=foundContext)
                     respOptions += [objectSecurity]
 
+                # if Stateless-Proxy option was present in the request echo it
+                for option in options:
+                    if isinstance(option, o.StatelessProxy):
+                        respOptions += [option]
+                        break
+
                 # build response packets and pass partialIV from the request for OSCOAP's processing
                 response = m.buildMessage(
                     msgtype          = responseType,
@@ -424,12 +432,20 @@ class coap(object):
             else:
                 raise SystemError('unexpected type {0}'.format(message['type']))
 
+            # if Stateless-Proxy option was present in the request echo it
+            errorOptions = []
+            for option in options:
+                if isinstance(option, o.StatelessProxy):
+                    errorOptions += [option]
+                    break
+
             # build response packets
             response = m.buildMessage(
                 msgtype             = responseType,
                 token            = message['token'],
                 code             = err.rc,
                 messageId        = message['messageId'],
+                options          = errorOptions,
             )
 
             # send
