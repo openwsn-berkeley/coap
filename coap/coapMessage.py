@@ -35,15 +35,16 @@ def buildMessage(msgtype,token,code,messageId,options=[],payload=[],securityCont
     assert code in d.METHOD_ALL+d.COAP_RC_ALL
     
     message   = []
-    
-    # determine token length
-    TKL = None
-    for tokenLen in range(1,8+1):
-        if token < (1<<(8*tokenLen)):
-            TKL = tokenLen
-            break
-    if not TKL:
-        raise ValueError('token {0} too long'.format(token))
+
+    TKL = 0
+    if token:
+        # determine token length
+        for tokenLen in range(1,8+1):
+            if token < (1<<(8*tokenLen)):
+                TKL = tokenLen
+                break
+        if not TKL:
+            raise ValueError('token {0} too long'.format(token))
     
     # header
     message += [d.COAP_VERSION<<6 | msgtype<<4 | TKL]
@@ -96,8 +97,11 @@ def parseMessage(message):
     # token
     if len(message)<TKL:
         raise e.messageFormatError('message too short, {0} bytes: no space for token'.format(len(message)))
-    returnVal['token']       = u.buf2int(message[:TKL])
-    message = message[TKL:]
+    if TKL:
+        returnVal['token']       = u.buf2int(message[:TKL])
+        message = message[TKL:]
+    else:
+        returnVal['token'] = None
     
     # outer options and payload/ciphertext
     (returnVal['options'], payload) = decodeOptionsAndPayload(message)
