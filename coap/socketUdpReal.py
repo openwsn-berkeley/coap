@@ -55,7 +55,8 @@ class socketUdpReal(socketUdp.socketUdp):
         
         # send over UDP
         with self.socketLock:
-            self.socket_handler.sendto(msg,(destIp,destPort))
+            addrinfo = socket.getaddrinfo(destIp, destPort)
+            self.socket_handler.sendto(msg,addrinfo[0][4])
         
         # increment stats
         self._incrementTx()
