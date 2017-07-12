@@ -25,7 +25,7 @@ from socketUdpReal       import socketUdpReal
 
 class coap(object):
 
-    def __init__(self,ipAddress='',udpPort=d.DEFAULT_UDP_PORT,testing=False):
+    def __init__(self,ipAddress='',udpPort=d.DEFAULT_UDP_PORT,testing=False,receiveCallback=None):
 
         # store params
         self.ipAddress            = ipAddress
@@ -42,17 +42,21 @@ class coap(object):
         self.respTimeout          = d.DFLT_RESPONSE_TIMEOUT
         self.maxRetransmit        = d.DFLT_MAX_RETRANSMIT
         self.secContextHandler    = None
+        if receiveCallback:
+            callback = receiveCallback
+        else:
+            callback = self._receive
         if testing:
             self.socketUdp        = socketUdpDispatcher(
                 ipAddress         = self.ipAddress,
                 udpPort           = self.udpPort,
-                callback          = self._receive,
+                callback          = callback,
             )
         else:
             self.socketUdp        = socketUdpReal(
                 ipAddress         = self.ipAddress,
                 udpPort           = self.udpPort,
-                callback          = self._receive,
+                callback          = callback,
             )
 
     #======================== public ==========================================
