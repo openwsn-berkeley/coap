@@ -211,19 +211,26 @@ class ProxyScheme(coapOption):
 
 class ObjectSecurity(coapOption):
 
-    def __init__(self, context=None, payload=[]):
+    def __init__(self, context=None, payload=[], kid=None):
 
         # initialize parent
         coapOption.__init__(self, d.OPTION_NUM_OBJECT_SECURITY, d.OSCOAP_CLASS_U)
 
         self.context = context
         self.value = payload
+        self.kid = kid
 
     def __repr__(self):
-        return 'ObjectSecurity(context={0},payload={1})'.format(self.context, self.value)
+        return 'ObjectSecurity(context={0},payload={1}, kid={2})'.format(self.context, self.value, self.kid)
 
     def setValue(self, payload):
         self.value = payload
+
+    def setKid(self,kid):
+        self.kid = kid
+
+    def setContext(self,context):
+        self.context = context
 
     def getPayloadBytes(self):
         return self.value

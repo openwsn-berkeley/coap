@@ -110,6 +110,7 @@ def parseMessage(message):
     objectSecurity = oscoap.objectSecurityOptionLookUp(returnVal['options'])
     if objectSecurity:
         oscoapDict = oscoap.parseObjectSecurity(objectSecurity.getPayloadBytes(), payload)
+        objectSecurity.setKid(oscoapDict['kid'])
         returnVal.update(oscoapDict)
     else:
         returnVal['payload'] = payload

@@ -167,10 +167,12 @@ def parseObjectSecurity(optionValue, payload):
 
     buffer = buffer[1:]
 
+    returnVal['partialIV'] = []
     if pivsz:
         returnVal['partialIV'] = buffer[:pivsz]
         buffer = buffer[pivsz:]
 
+    returnVal['kid'] = []
     if k:
         kidLength = buffer[0]
         buffer = buffer[1:]

@@ -316,6 +316,9 @@ class coap(object):
                     if context != foundContext:
                         raise e.coapRcUnauthorized('Unauthorized security context for the given resource')
 
+                objectSecurity = oscoap.objectSecurityOptionLookUp(options)
+                if objectSecurity:
+                    objectSecurity.setContext(foundContext)
                 #==== get a response
 
                 # call the right resource's method
