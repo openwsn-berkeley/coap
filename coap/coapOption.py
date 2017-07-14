@@ -116,6 +116,9 @@ class UriPath(coapOption):
 class ContentFormat(coapOption):
     
     def __init__(self,cformat):
+
+        if len(cformat)==0:
+            cformat = [0]
         
         assert len(cformat)==1
         assert cformat[0] in d.FORMAT_ALL
