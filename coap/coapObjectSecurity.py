@@ -50,13 +50,14 @@ def protectMessage(context, version, code, options = [], payload = [], partialIV
 
     # construct aad
 
-    requestKid = context.senderID
     requestSeq = partialIV.lstrip('\0')
 
     # construct nonce
     if _isRequest(code):
+        requestKid = context.senderID
         nonce = u.xorStrings(context.senderIV, partialIV)
     else:   # response
+        requestKid = context.recipientID
         nonce = u.xorStrings(u.flipFirstBit(context.senderIV), partialIV)
 
     aad = _constructAAD(version,
@@ -112,8 +113,11 @@ def unprotectMessage(context, version, code, options = [], ciphertext = [], part
         raise e.messageFormatError('invalid oscoap message. E-class option present in the outer message')
 
     if _isRequest(code):
+        requestKid = context.recipientID
         if not context.replayWindowLookup(u.buf2int(u.str2buf(partialIV))):
             raise e.oscoapError('Replay protection failed')
+    else:
+        requestKid = context.senderID
 
     requestSeq = partialIV.lstrip('\0')
 
@@ -121,7 +125,7 @@ def unprotectMessage(context, version, code, options = [], ciphertext = [], part
                         code,
                         u.buf2str(m.encodeOptions(optionsClassI)),
                         context.aeadAlgorithm.value,
-                        context.recipientID,
+                        requestKid,
                         requestSeq)
 
     # construct nonce
