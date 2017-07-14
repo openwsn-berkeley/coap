@@ -116,6 +116,9 @@ class UriPath(coapOption):
 class ContentFormat(coapOption):
     
     def __init__(self,cformat):
+
+        if len(cformat)==0:
+            cformat = [0]
         
         assert len(cformat)==1
         assert cformat[0] in d.FORMAT_ALL
@@ -137,6 +140,24 @@ class ContentFormat(coapOption):
 #=== OPTION_NUM_URIQUERY
 
 #=== OPTION_NUM_ACCEPT
+
+class Accept(coapOption):
+    def __init__(self, accept):
+        assert len(accept) == 1
+        assert accept[0] in d.FORMAT_ALL
+
+        # initialize parent
+        coapOption.__init__(self, d.OPTION_NUM_ACCEPT, d.OSCOAP_CLASS_E)
+
+        # store params
+        self.accept = accept[0]
+
+    def __repr__(self):
+        return 'Accept(format={0})'.format(self.accept)
+
+    def getPayloadBytes(self):
+        return [self.accept]
+
 
 #=== OPTION_NUM_LOCATIONQUERY
 
