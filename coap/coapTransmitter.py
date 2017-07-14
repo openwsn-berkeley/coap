@@ -10,10 +10,10 @@ import time
 import threading
 import random
 
-import coapDefines   as d
-import coapException as e
-import coapUtils     as u
-import coapMessage   as m
+import coapDefines          as d
+import coapException        as e
+import coapUtils            as u
+import coapMessage          as m
 
 class coapTransmitter(threading.Thread):
     '''
@@ -47,7 +47,7 @@ class coapTransmitter(threading.Thread):
         STATE_TXACK,
     ]
 
-    def __init__(self,sendFunc,srcIp,srcPort,destIp,destPort,confirmable,messageId,code,token,options,payload,ackTimeout,respTimeout,maxRetransmit):
+    def __init__(self,sendFunc,srcIp,srcPort,destIp,destPort,confirmable,messageId,code,token,options,payload,securityContext,requestSeq,ackTimeout,respTimeout,maxRetransmit):
         '''
         \brief Initilizer function.
 
@@ -82,6 +82,8 @@ class coapTransmitter(threading.Thread):
             to be a byte list, i.e. a list of intergers between 0x00 and 0xff.
             This function does not parse this payload, which is written as-is
             in the CoAP request.
+        \param[in] securityContext Security context used for protection of the request
+        \param[in] requestSeq OSCOAP's sequence number from the request.
         \param[in] ackTimeout The ACK timeout.
         \param[in] respTimeout The app-level response timeout.
         '''
@@ -101,6 +103,8 @@ class coapTransmitter(threading.Thread):
         self.token           = token
         self.options         = options
         self.payload         = payload
+        self.securityContext = securityContext
+        self.requestSeq      = requestSeq
         self.maxRetransmit   = maxRetransmit
 
         # local variables
@@ -283,6 +287,8 @@ class coapTransmitter(threading.Thread):
             messageId        = self.messageId,
             options          = self.options,
             payload          = self.payload,
+            securityContext  = self.securityContext,
+            partialIV        = self.requestSeq,
         )
 
         # send
@@ -314,6 +320,8 @@ class coapTransmitter(threading.Thread):
             messageId        = self.messageId,
             options          = self.options,
             payload          = self.payload,
+            securityContext  = self.securityContext,
+            partialIV        = self.requestSeq,
         )
 
         # send

@@ -10,11 +10,14 @@ import time
 
 import pytest
 
+import binascii
+
 import testUtils        as utils
 import snoopyDispatcher as snoopyDis
 from coap import coap, \
-                 coapDefines as d, \
-                 coapResource
+                 coapDefines        as d,       \
+                 coapResource,                  \
+                 coapObjectSecurity as oscoap
 
 #============================ logging =========================================
 
@@ -38,11 +41,15 @@ LOG_MODULES = [
     'snoopyDispatcher',
 ]
 
-IPADDRESS1 = 'aaaa::1'
-IPADDRESS2 = 'aaaa::2'
+IPADDRESS1          = 'aaaa::1'
+IPADDRESS2          = 'aaaa::2'
 
-RESOURCE   = 'res'
-DUMMYVAL   = [0x00,0x01,0x02]
+RESOURCE            = 'res'
+DUMMYVAL            = [0x00,0x01,0x02]
+
+OSCOAPMASTERSECRET  = binascii.unhexlify('000102030405060708090A0B0C0D0E0F')
+OSCOAPSERVERID      = binascii.unhexlify('00212ffffeb56e1001')
+OSCOAPCLIENTID      = binascii.unhexlify('00212ffffeb56e1000')
 
 #============================ fixtures ========================================
 
@@ -154,23 +161,37 @@ def twoEndPointsTeardown(coap1,coap2):
     time.sleep(0.500)
     assert len(threading.enumerate())==1
 
-@pytest.fixture(scope='module')
+SECURITYFIXTURE = [
+    False,
+    True,
+]
+
+@pytest.fixture(params=SECURITYFIXTURE, scope='function')
 def twoEndPoints(request):
     
     # start two coap endpoints
-    coap1 = coap.coap(ipAddress=IPADDRESS1,testing=True)
-    coap2 = coap.coap(ipAddress=IPADDRESS2,testing=True)
-    
+    coap1 = coap.coap(ipAddress=IPADDRESS1, testing=True)
+    coap2 = coap.coap(ipAddress=IPADDRESS2, testing=True)
+
     # create new resource
     newResource = dummyResource()
-    
+
+    if request.param == True: # if testing with security, protect the resource with security context
+        context = oscoap.SecurityContext(masterSecret=OSCOAPMASTERSECRET,
+                                         senderID=OSCOAPCLIENTID,
+                                         recipientID=OSCOAPSERVERID)
+
+        # add resource - context binding with authorized methods
+        newResource.addSecurityBinding((context, d.METHOD_ALL))
+
     # install resource on coap1
     coap1.addResource(newResource)
-    
-    f = lambda : twoEndPointsTeardown(coap1,coap2)
+
+    f = lambda: twoEndPointsTeardown(coap1, coap2)
     request.addfinalizer(f)
-    
-    return (coap1,coap2)
+
+    return (coap1, coap2, request.param)
+
 
 #===== confirmableFixture
 

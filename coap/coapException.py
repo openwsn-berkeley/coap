@@ -38,6 +38,11 @@ class coapMalformattedUri(coapException):
 class messageFormatError(coapException):
     pass
 
+#======================== oscoap verification =================================
+
+class oscoapError(coapException):
+    pass
+
 #============================ return codes ====================================
 
 class coapRc(coapException):

@@ -6,8 +6,13 @@ import threading
 
 from conftest import IPADDRESS1, \
                      RESOURCE, \
-                     DUMMYVAL
-from coap     import coapDefines as d
+                     DUMMYVAL, \
+                     OSCOAPMASTERSECRET, \
+                     OSCOAPSERVERID, \
+                     OSCOAPCLIENTID
+from coap     import coapDefines as d, \
+                     coapOption as o, \
+                     coapObjectSecurity as oscoap
 
 #============================ logging ===============================
 
@@ -18,12 +23,21 @@ log.addHandler(utils.NullHandler())
 
 def test_GET(logFixture,snoopyDispatcher,twoEndPoints):
     
-    (coap1,coap2) = twoEndPoints
+    (coap1,coap2,securityEnabled) = twoEndPoints
+
+    options = []
+    if securityEnabled:
+        context = oscoap.SecurityContext(masterSecret   = OSCOAPMASTERSECRET,
+                                         senderID       = OSCOAPSERVERID,
+                                         recipientID    = OSCOAPCLIENTID)
+
+        options = [o.ObjectSecurity(context=context)]
     
     # have coap2 do a get
     for _ in range(20):
         reply = coap2.GET(
             uri         = 'coap://[{0}]:{1}/{2}/'.format(IPADDRESS1,d.DEFAULT_UDP_PORT,RESOURCE),
             confirmable = False,
+            options     = options
         )
         assert reply==DUMMYVAL

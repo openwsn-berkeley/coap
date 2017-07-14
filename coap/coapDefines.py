@@ -3,6 +3,11 @@ COAP_VERSION                           = 1
 COAP_PAYLOAD_MARKER                    = 0xff
 COAP_SCHEME                            = 'coap://'
 
+# OSCOAP option classes
+OSCOAP_CLASS_E                         = 'E'  # encrypted and integrity protected
+OSCOAP_CLASS_I                         = 'I'  # integrity protected
+OSCOAP_CLASS_U                         = 'U'  # unprotected
+
 # Default transmission parameters
 DFLT_ACK_TIMEOUT                       = 20   # in s. 
 DFLT_ACK_RANDOM_FACTOR                 = 1.5  # ACK timeout in [DFLT_ACK_TIMEOUT..DFLT_ACK_TIMEOUT*DFLT_ACK_RANDOM_FACTOR]
@@ -108,6 +113,8 @@ OPTION_NUM_BLOCK2                      = 23
 OPTION_NUM_BLOCK1                      = 27
 OPTION_NUM_PROXYURI                    = 35
 OPTION_NUM_PROXYSCHEME                 = 39
+OPTION_NUM_OBJECT_SECURITY             = 21 # plugtest value
+OPTION_NUM_STATELESSPROXY              = 40 # experimental value
 OPTION_NUM_ALL = [
     OPTION_NUM_IFMATCH,
     OPTION_NUM_URIHOST,
@@ -125,6 +132,8 @@ OPTION_NUM_ALL = [
     OPTION_NUM_BLOCK1,
     OPTION_NUM_PROXYURI,
     OPTION_NUM_PROXYSCHEME,
+    OPTION_NUM_OBJECT_SECURITY,
+    OPTION_NUM_STATELESSPROXY,
 ]
 
 # CoAP Content-Format Registry
@@ -143,4 +152,24 @@ FORMAT_ALL = [
     FORMAT_EXI,
     FORMAT_JSON,
     FORMAT_CBOR,
+]
+
+# COSE defines for AES-CCM algorithm used in OSCoAP (c.f. draft-ietf-cose-msg-24)
+COSE_AES_CCM_16_64_128                 = 10
+COSE_AES_CCM_16_64_256                 = 11
+COSE_AES_CCM_64_64_128                 = 12
+COSE_AES_CCM_64_64_256                 = 13
+COSE_AES_CCM_16_128_128                = 30
+COSE_AES_CCM_16_128_256                = 31
+COSE_AES_CCM_64_128_128                = 32
+COSE_AES_CCM_64_128_256                = 33
+COSE_AES_CCM_ALL = [
+    COSE_AES_CCM_16_64_128,
+    COSE_AES_CCM_16_64_256,
+    COSE_AES_CCM_64_64_128,
+    COSE_AES_CCM_64_64_256,
+    COSE_AES_CCM_16_128_128,
+    COSE_AES_CCM_16_128_256,
+    COSE_AES_CCM_64_128_128,
+    COSE_AES_CCM_64_128_256,
 ]

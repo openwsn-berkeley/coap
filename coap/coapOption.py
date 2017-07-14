@@ -14,10 +14,11 @@ import coapDefines   as d
 
 class coapOption(object):
     
-    def __init__(self,optionNumber):
+    def __init__(self,optionNumber, oscoapClass=d.OSCOAP_CLASS_E):
         
         # store params
         self.optionNumber = optionNumber
+        self.oscoapClass  = oscoapClass
         self.length       = 0
     
     #======================== abstract methods ================================
@@ -70,6 +71,20 @@ class coapOption(object):
 
 #=== OPTION_NUM_URIHOST
 
+class UriHost(coapOption):
+    def __init__(self, host):
+        # initialize parent
+        coapOption.__init__(self, d.OPTION_NUM_URIHOST, d.OSCOAP_CLASS_U)
+
+        # store params
+        self.host = host
+
+    def __repr__(self):
+        return 'UriHost(host={0})'.format(self.host)
+
+    def getPayloadBytes(self):
+        return [ord(b) for b in self.host]
+
 #=== OPTION_NUM_ETAG
 
 #=== OPTION_NUM_IFNONEMATCH
@@ -85,7 +100,7 @@ class UriPath(coapOption):
     def __init__(self,path):
         
         # initialize parent
-        coapOption.__init__(self,d.OPTION_NUM_URIPATH)
+        coapOption.__init__(self,d.OPTION_NUM_URIPATH, d.OSCOAP_CLASS_E)
         
         # store params
         self.path = path
@@ -106,7 +121,7 @@ class ContentFormat(coapOption):
         assert cformat[0] in d.FORMAT_ALL
         
         # initialize parent
-        coapOption.__init__(self,d.OPTION_NUM_CONTENTFORMAT)
+        coapOption.__init__(self,d.OPTION_NUM_CONTENTFORMAT, d.OSCOAP_CLASS_E)
         
         # store params
         self.format = cformat[0]
@@ -141,7 +156,7 @@ class Block2(coapOption):
             assert szx!=None
         
         # initialize parent
-        coapOption.__init__(self,d.OPTION_NUM_BLOCK2)
+        coapOption.__init__(self,d.OPTION_NUM_BLOCK2, d.OSCOAP_CLASS_E)
         
         # store params
         if num:
@@ -178,6 +193,63 @@ class Block2(coapOption):
 
 #=== OPTION_NUM_PROXYSCHEME
 
+class ProxyScheme(coapOption):
+    def __init__(self, scheme):
+        # initialize parent
+        coapOption.__init__(self, d.OPTION_NUM_PROXYSCHEME, d.OSCOAP_CLASS_U)
+
+        # store params
+        self.scheme = scheme
+
+    def __repr__(self):
+        return 'ProxyScheme(scheme={0})'.format(self.scheme)
+
+    def getPayloadBytes(self):
+        return [ord(b) for b in self.scheme]
+
+#=== OPTION_NUM_OBJECT_SECURITY
+
+class ObjectSecurity(coapOption):
+
+    def __init__(self, context=None, payload=[], kid=None):
+
+        # initialize parent
+        coapOption.__init__(self, d.OPTION_NUM_OBJECT_SECURITY, d.OSCOAP_CLASS_U)
+
+        self.context = context
+        self.value = payload
+        self.kid = kid
+
+    def __repr__(self):
+        return 'ObjectSecurity(context={0},payload={1}, kid={2})'.format(self.context, self.value, self.kid)
+
+    def setValue(self, payload):
+        self.value = payload
+
+    def setKid(self,kid):
+        self.kid = kid
+
+    def setContext(self,context):
+        self.context = context
+
+    def getPayloadBytes(self):
+        return self.value
+
+# === OPTION_NUM_STATELESSPROXY
+
+class StatelessProxy(coapOption):
+    def __init__(self, value):
+        # initialize parent
+        coapOption.__init__(self, d.OPTION_NUM_STATELESSPROXY, d.OSCOAP_CLASS_U)
+
+        # store params
+        self.opaqueValue = value
+
+    def __repr__(self):
+        return 'StatelessProxy(value={0})'.format(self.opaqueValue)
+
+    def getPayloadBytes(self):
+        return self.opaqueValue
 #============================ functions =======================================
 
 def parseOption(message,previousOptionNumber):
@@ -223,13 +295,13 @@ def parseOption(message,previousOptionNumber):
         pass
     elif optionDelta==13:
         if len(message)<1:
-            raise e.messageFormatError('message to short, {0} bytes: not space for 1B optionDelta'.format(len(message)))
-        optionDelta = u.buf2int(message[0])+13
+            raise e.messageFormatError('message too short, {0} bytes: no space for 1B optionDelta'.format(len(message)))
+        optionDelta = u.buf2int(message[0:1])+13
         message = message[1:]
     elif optionDelta==14:
         if len(message)<2:
-            raise e.messageFormatError('message to short, {0} bytes: not space for 2B optionDelta'.format(len(message)))
-        optionDelta = u.buf2int(message[0:1])+269
+            raise e.messageFormatError('message too short, {0} bytes: no space for 2B optionDelta'.format(len(message)))
+        optionDelta = u.buf2int(message[0:2])+269
         message = message[2:]
     else:
         raise e.messageFormatError('invalid optionDelta={0}'.format(optionDelta))
@@ -241,13 +313,13 @@ def parseOption(message,previousOptionNumber):
         pass
     elif optionLength==13:
         if len(message)<1:
-            raise e.messageFormatError('message to short, {0} bytes: not space for 1B optionLength'.format(len(message)))
-        optionLength = u.buf2int(message[0])+13
+            raise e.messageFormatError('message too short, {0} bytes: no space for 1B optionLength'.format(len(message)))
+        optionLength = u.buf2int(message[0:1])+13
         message = message[1:]
     elif optionLength==14:
         if len(message)<2:
-            raise e.messageFormatError('message to short, {0} bytes: not space for 2B optionLength'.format(len(message)))
-        optionLength = u.buf2int(message[0:1])+269
+            raise e.messageFormatError('message too short, {0} bytes: no space for 2B optionLength'.format(len(message)))
+        optionLength = u.buf2int(message[0:2])+269
         message = message[2:]
     else:
         raise e.messageFormatError('invalid optionLength={0}'.format(optionLength))
@@ -256,7 +328,7 @@ def parseOption(message,previousOptionNumber):
     
     # optionValue
     if len(message)<optionLength:
-        raise e.messageFormatError('message to short, {0} bytes: not space for optionValue'.format(len(message)))
+        raise e.messageFormatError('message too short, {0} bytes: no space for optionValue'.format(len(message)))
     optionValue = message[:optionLength]
     message = message[optionLength:]
     
@@ -269,13 +341,21 @@ def parseOption(message,previousOptionNumber):
     
     if optionNumber not in d.OPTION_NUM_ALL:
         raise e.messageFormatError('invalid option number {0} (0x{0:x})'.format(optionNumber))
-    
-    if   optionNumber==d.OPTION_NUM_URIPATH:
+
+    if optionNumber==d.OPTION_NUM_URIHOST:
+        option = UriHost(host=''.join([chr(b) for b in optionValue]))
+    elif optionNumber==d.OPTION_NUM_URIPATH:
         option = UriPath(path=''.join([chr(b) for b in optionValue]))
     elif optionNumber==d.OPTION_NUM_CONTENTFORMAT:
         option = ContentFormat(cformat=optionValue)
     elif optionNumber==d.OPTION_NUM_BLOCK2:
         option = Block2(rawbytes=optionValue)
+    elif optionNumber==d.OPTION_NUM_OBJECT_SECURITY:
+        option = ObjectSecurity(payload=optionValue)
+    elif optionNumber==d.OPTION_NUM_PROXYSCHEME:
+        option = ProxyScheme(scheme=''.join([chr(b) for b in optionValue]))
+    elif optionNumber==d.OPTION_NUM_STATELESSPROXY:
+        option = StatelessProxy(value=optionValue)
     else:
         raise NotImplementedError('option {0} not implemented'.format(optionNumber))
     

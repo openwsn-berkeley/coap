@@ -32,6 +32,24 @@ def buf2int(buf):
         returnVal += buf[i]<<(8*(len(buf)-1-i))
     return returnVal
 
+def buf2str(buf):
+    return ''.join([chr(b) for b in buf])
+
+def str2buf(str):
+    return [ord(b) for b in str]
+
+#===== byte manipulation
+
+def xorStrings(s1,s2):
+    assert len(s1) == len(s2)
+    return ''.join(chr(ord(a) ^ ord(b)) for a, b in zip(s1, s2))
+
+def zeroPadString(s1, len):
+    return '{:\0>{width}}'.format(s1, width=len)
+
+def flipFirstBit(s1):
+    return xorStrings(s1, '\x80' + '\x00' * (len(s1) - 1))
+
 #===== formatting
 
 def formatBuf(buf):
