@@ -7,6 +7,7 @@ log.setLevel(logging.ERROR)
 log.addHandler(NullHandler())
 
 import re
+import socket
 
 import coapUtils     as u
 import coapOption    as o
@@ -109,7 +110,10 @@ def uri2options(uri):
     
     # remove hostPort
     uri       = uri.split(hostPort,1)[1]
-    
+
+    # convert host to IP address
+    host = socket.getaddrinfo(host, port)[0][4][0]
+
     # Uri-path
     paths     = [p for p in uri.split('?')[0].split('/') if p]
     log.debug('paths    : {0}'.format(paths))
