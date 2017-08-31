@@ -109,7 +109,7 @@ def uri2options(uri):
     
     # remove hostPort
     uri       = uri.split(hostPort,1)[1]
-    
+
     # Uri-path
     paths     = [p for p in uri.split('?')[0].split('/') if p]
     log.debug('paths    : {0}'.format(paths))

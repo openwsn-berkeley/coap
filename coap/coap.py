@@ -9,6 +9,7 @@ log.addHandler(NullHandler())
 import threading
 import random
 import traceback
+import socket
 
 import coapTokenizer        as t
 import coapUtils            as u
@@ -130,7 +131,8 @@ class coap(object):
             assert payload==[]
         assert type(uri)==str
 
-        (destIp,destPort,uriOptions) = coapUri.uri2options(uri)
+        (host,destPort,uriOptions) = coapUri.uri2options(uri)
+        destIp = socket.getaddrinfo(host, destPort)[0][4][0]
         (securityContext, sequenceNumber) = oscoap.getRequestSecurityParams(oscoap.objectSecurityOptionLookUp(options))
 
         with self.transmittersLock:
