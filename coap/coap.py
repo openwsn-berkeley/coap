@@ -239,11 +239,10 @@ class coap(object):
 
         srcPort = sender[1]
 
-        options = []
-
         # parse messages
         try:
             message = m.parseMessage(rawbytes)
+            options = message['options']
         except e.messageFormatError as err:
             log.warning('malformed message {0}: {1}'.format(u.formatBuf(rawbytes),str(err)))
             return
@@ -291,7 +290,7 @@ class coap(object):
                 else: # message not encrypted
                     payload = message['payload']
 
-                options = message['options'] + innerOptions
+                options += innerOptions
 
                 #==== find right resource
 
