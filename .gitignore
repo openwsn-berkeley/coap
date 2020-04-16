@@ -16,3 +16,8 @@ __pycache__
 *.pcap
 test_report.xml
 /*.dblite
+
+# misc
+venv/*
+.idea
+
