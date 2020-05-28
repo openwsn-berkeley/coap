@@ -366,7 +366,7 @@ class AES_CCM_16_64_128(CCMAlgorithm):
 class SecurityContext:
     REPLAY_WINDOW_SIZE = 64
 
-    def __init__(self, masterSecret, senderID, recipientID, aeadAlgorithm=AES_CCM_64_64_128(), masterSalt='',
+    def __init__(self, masterSecret, senderID, recipientID, idContext=None, aeadAlgorithm=AES_CCM_64_64_128(), masterSalt='',
                  hashFunction=hashlib.sha256):
 
         # Common context
@@ -375,25 +375,30 @@ class SecurityContext:
         self.masterSecret = masterSecret
         self.masterSalt = masterSalt
 
+        self.idContext = idContext
+
+        # common IV
+        self.commonIV = self._hkdfDeriveParameter(self.hashFunction,
+                                                  self.masterSecret,
+                                                  self.masterSalt,
+                                                  '',
+                                                  self.idContext,
+                                                  self.aeadAlgorithm.value,
+                                                  'IV',
+                                                  self.aeadAlgorithm.ivLength
+                                                  )
+
         # Sender context
         self.senderID = senderID
         self.senderKey = self._hkdfDeriveParameter(self.hashFunction,
                                                    self.masterSecret,
                                                    self.masterSalt,
                                                    self.senderID,
+                                                   self.idContext,
                                                    self.aeadAlgorithm.value,
                                                    'Key',
                                                    self.aeadAlgorithm.keyLength
                                                    )
-
-        self.senderIV = self._hkdfDeriveParameter(self.hashFunction,
-                                                  self.masterSecret,
-                                                  self.masterSalt,
-                                                  self.senderID,
-                                                  self.aeadAlgorithm.value,
-                                                  'IV',
-                                                  self.aeadAlgorithm.ivLength
-                                                  )
         self.sequenceNumber = 0
 
         # Recipient context
@@ -402,18 +407,11 @@ class SecurityContext:
                                                       self.masterSecret,
                                                       self.masterSalt,
                                                       self.recipientID,
+                                                      self.idContext,
                                                       self.aeadAlgorithm.value,
                                                       'Key',
                                                       self.aeadAlgorithm.keyLength
                                                       )
-        self.recipientIV = self._hkdfDeriveParameter(self.hashFunction,
-                                                     self.masterSecret,
-                                                     self.masterSalt,
-                                                     self.recipientID,
-                                                     self.aeadAlgorithm.value,
-                                                     'IV',
-                                                     self.aeadAlgorithm.ivLength
-                                                     )
         self.replayWindow = [0]
 
     # ======================== public ==========================================
@@ -447,10 +445,11 @@ class SecurityContext:
 
     # ======================== private ==========================================
 
-    def _hkdfDeriveParameter(self, hashFunction, masterSecret, masterSalt, id, algorithm, type, length):
+    def _hkdfDeriveParameter(self, hashFunction, masterSecret, masterSalt, id, idContext, algorithm, type, length):
 
         info = cbor.dumps([
             id,
+            idContext,
             algorithm,
             unicode(type),  # encode as text string
             length
