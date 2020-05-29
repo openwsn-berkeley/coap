@@ -133,15 +133,15 @@ def unprotectMessage(context, version, code, options=[], ciphertext=[], partialI
             ciphertext=u.buf2str(ciphertext),
             key=context.recipientKey,
             nonce=nonce)
+
+        plaintextBuf = u.str2buf(plaintext)
+        decryptedCode = plaintextBuf[0]
+        plaintextBuf = plaintext[1:]
     except e.oscoreError:
         raise
 
     if _isRequest(code):
         context.replayWindowUpdate(u.buf2int(u.str2buf(partialIV)))
-
-    plaintextBuf = u.str2buf(plaintext)
-    decryptedCode = plaintextBuf[0]
-    plaintextBuf = plaintext[1:]
 
     (innerOptions, payload) = m.decodeOptionsAndPayload(u.str2buf(plaintextBuf))
     # returns a tuple (decryptedCode, innerOptions, payload)
