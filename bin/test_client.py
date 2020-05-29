@@ -17,10 +17,12 @@ SERVER_IP = '::1'
 # open
 c = coap.coap(udpPort=5000)
 
-context = oscoap.SecurityContext(masterSecret=binascii.unhexlify('000102030405060708090A0B0C0D0E0F'),
-                                 senderID=binascii.unhexlify('636c69656e74'),
-                                 recipientID=binascii.unhexlify('736572766572'),
-                                 aeadAlgorithm=oscoap.AES_CCM_16_64_128())
+context = oscoap.SecurityContext(masterSecret   = binascii.unhexlify('0102030405060708090a0b0c0d0e0f10'),
+                                 masterSalt     = binascii.unhexlify('9e7ca92223786340'),
+                                 senderID       = binascii.unhexlify(''),
+                                 recipientID    = binascii.unhexlify('01'),
+                                 idContext      = binascii.unhexlify('37cbf3210017a2d3'),
+                                 aeadAlgorithm  = oscoap.AES_CCM_16_64_128())
 
 objectSecurity = o.ObjectSecurity(context=context)
 

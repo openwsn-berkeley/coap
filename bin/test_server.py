@@ -35,9 +35,11 @@ c = coap.coap(ipAddress='::1')
 
 testResource = testResource()
 
-context = oscoap.SecurityContext(masterSecret   = binascii.unhexlify('000102030405060708090A0B0C0D0E0F'),
-                                 senderID       = binascii.unhexlify('736572766572'),
-                                 recipientID    = binascii.unhexlify('636c69656e74'),
+context = oscoap.SecurityContext(masterSecret   = binascii.unhexlify('0102030405060708090a0b0c0d0e0f10'),
+                                 masterSalt     = binascii.unhexlify('9e7ca92223786340'),
+                                 senderID       = binascii.unhexlify('01'),
+                                 recipientID    = binascii.unhexlify(''),
+                                 idContext      = binascii.unhexlify('37cbf3210017a2d3'),
                                  aeadAlgorithm  = oscoap.AES_CCM_16_64_128())
 
 # add resource - context binding with authorized methods
