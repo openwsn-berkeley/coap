@@ -48,8 +48,8 @@ RESOURCE            = 'res'
 DUMMYVAL            = [0x00,0x01,0x02]
 
 OSCOAPMASTERSECRET  = binascii.unhexlify('000102030405060708090A0B0C0D0E0F')
-OSCOAPSERVERID      = binascii.unhexlify('00212ffffeb56e1001')
-OSCOAPCLIENTID      = binascii.unhexlify('00212ffffeb56e1000')
+OSCOAPSERVERID      = binascii.unhexlify('01')
+OSCOAPCLIENTID      = binascii.unhexlify('')
 
 #============================ fixtures ========================================
 

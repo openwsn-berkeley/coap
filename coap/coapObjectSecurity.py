@@ -335,6 +335,10 @@ class CCMAlgorithm(object):
     def maxSequenceNumber(self):
         raise NotImplementedError
 
+    @property
+    def maxIdLen(self):
+        raise NotImplementedError
+
     # ======================== public ==========================================
 
     def authenticateAndEncrypt(self, aad, plaintext, key, nonce):
@@ -372,7 +376,7 @@ class AES_CCM_64_64_128(CCMAlgorithm):
     ivLength = 7
     tagLength = 8
     maxSequenceNumber = 2 ** (min(ivLength * 8, 56) - 1) - 1
-
+    maxIdLen = ivLength - 6
 
 class AES_CCM_16_64_128(CCMAlgorithm):
     value = d.COSE_AES_CCM_16_64_128
@@ -380,13 +384,16 @@ class AES_CCM_16_64_128(CCMAlgorithm):
     ivLength = 13
     tagLength = 8
     maxSequenceNumber = 2 ** (min(ivLength * 8, 56) - 1) - 1
-
+    maxIdLen = ivLength - 6
 
 class SecurityContext:
     REPLAY_WINDOW_SIZE = 64
 
     def __init__(self, masterSecret, senderID, recipientID, idContext=None, aeadAlgorithm=AES_CCM_64_64_128(), masterSalt='',
                  hashFunction=hashlib.sha256):
+
+        if len(senderID) > aeadAlgorithm.maxIdLen or len(recipientID) > aeadAlgorithm.maxIdLen:
+            raise e.oscoapError('Max ID length for AEAD algorithm {0} is {1}.'.format(aeadAlgorithm.value, aeadAlgorithm.maxIdLen))
 
         # Common context
         self.aeadAlgorithm = aeadAlgorithm
