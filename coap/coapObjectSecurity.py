@@ -233,6 +233,8 @@ def _encodeCompressedCOSE(partialIV, kid, kidContext):
     if kidFlag:
         buffer += u.str2buf(kid)
 
+    if buffer == [0]:
+        return []
     return buffer
 
 '''
