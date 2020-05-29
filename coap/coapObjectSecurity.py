@@ -153,40 +153,36 @@ def unprotectMessage(context, version, code, options=[], ciphertext=[], partialI
 
 
 def parseObjectSecurity(optionValue, payload):
-    if optionValue and payload:
-        raise e.messageFormatError('invalid oscoap message, both payload and value are set.')
-    elif optionValue:
-        buffer = optionValue
-    elif payload:
-        buffer = payload
-    else:
-        raise e.messageFormatError('invalid oscoap message. no value or payload found.')
 
     returnVal = {}
 
     # decode first byte
-    pivsz = (buffer[0] >> 0) & 0x07
-    k = (buffer[0] >> 3) & 0x01
-    reserved = (buffer[0] >> 4) & 0x0f
+    n = (optionValue[0] >> 0) & 0x07
+    k = (optionValue[0] >> 3) & 0x01
+    h = (optionValue[0] >> 4) & 0x01
+    reserved = (optionValue[0] >> 5) & 0x07
 
     if reserved:
         raise e.messageFormatError('invalid oscoap message. reserved bits set.')
 
-    buffer = buffer[1:]
+    optionValue = optionValue[1:]
 
     returnVal['partialIV'] = []
-    if pivsz:
-        returnVal['partialIV'] = buffer[:pivsz]
-        buffer = buffer[pivsz:]
+    if n:
+        returnVal['partialIV'] = optionValue[:n]
+        optionValue = optionValue[n:]
+
+    if h:
+        kidContextLen = optionValue[0]
+        optionValue = optionValue[1:]
+        returnVal['kidContext'] = optionValue[:kidContextLen]
+        optionValue = optionValue[kidContextLen:]
 
     returnVal['kid'] = []
     if k:
-        kidLength = buffer[0]
-        buffer = buffer[1:]
-        returnVal['kid'] = buffer[:kidLength]
-        buffer = buffer[kidLength:]
+        returnVal['kid'] = optionValue
 
-    returnVal['ciphertext'] = buffer
+    returnVal['ciphertext'] = payload
 
     return returnVal
 
@@ -210,42 +206,36 @@ def objectSecurityOptionLookUp(options):
 
 
 '''
-   7 6 5 4 3 2 1 0
-  +-+-+-+-+-+-+-+-+  k: kid flag bit
-  |0 0 0 0|k|pivsz|  pivsz: Partial IV size (3 bits)
-  +-+-+-+-+-+-+-+-+
+          0 1 2 3 4 5 6 7 <------------- n bytes -------------->
+         +-+-+-+-+-+-+-+-+--------------------------------------
+         |0 0 0|h|k|  n  |       Partial IV (if any) ...
+         +-+-+-+-+-+-+-+-+--------------------------------------
 
-+-------+---------+------------+
-|       | Request | Resp with- |
-|       |         | out observe|
-+-------+---------+------------+
-|     k |    1    |     0      |
-| pivsz |  > 0    |     0      |
-+-------+---------+------------+
+          <- 1 byte -> <----- s bytes ------>
+         +------------+----------------------+------------------+
+         | s (if any) | kid context (if any) | kid (if any) ... |
+         +------------+----------------------+------------------+
+
 
 '''
-
-
-def _encodeCompressedCOSE(partialIV, kid, ciphertext):
+def _encodeCompressedCOSE(partialIV, kid, kidContext):
     buffer = []
 
-    if kid:
-        kidFlag = 1
-    else:
-        kidFlag = 0
+    h = 1 if kidContext is not None else 0
 
-    buffer += [kidFlag << 3 | len(partialIV)]  # flag byte
+    kidFlag = 1 if kid else 0
+
+    buffer += [h << 4 | kidFlag << 3 | len(partialIV)]  # flag byte
 
     if partialIV:
         buffer += u.str2buf(partialIV)
-    if kid:
-        buffer += [len(kid)]
+    if h:
+        buffer += [len(kidContext)]
+        buffer += u.str2buf(kidContext)
+    if kidFlag:
         buffer += u.str2buf(kid)
 
-    buffer += u.str2buf(ciphertext)
-
     return buffer
-
 
 def _constructAAD(version, code, optionsSerialized, aeadAlgorithm, requestKid, requestSeq):
     externalAad = cbor.dumps([
