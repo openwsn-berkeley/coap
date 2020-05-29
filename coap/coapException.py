@@ -38,9 +38,9 @@ class coapMalformattedUri(coapException):
 class messageFormatError(coapException):
     pass
 
-#======================== oscoap verification =================================
+#======================== oscore verification =================================
 
-class oscoapError(coapException):
+class oscoreError(coapException):
     pass
 
 #============================ return codes ====================================

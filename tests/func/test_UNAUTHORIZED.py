@@ -11,13 +11,13 @@ import binascii
 from conftest import IPADDRESS1, \
                      RESOURCE, \
                      DUMMYVAL, \
-                     OSCOAPMASTERSECRET, \
-                     OSCOAPSERVERID, \
-                     OSCOAPCLIENTID
+                     OSCOREMASTERSECRET, \
+                     OSCORESERVERID, \
+                     OSCORECLIENTID
 from coap     import coapDefines as d, \
                      coapException as e, \
                      coapOption as o, \
-                     coapObjectSecurity as oscoap
+                     coapObjectSecurity as oscore
 
 #============================ logging =========================================
 
@@ -54,7 +54,7 @@ def test_UNAUTHORIZED_2(logFixture, snoopyDispatcher, twoEndPoints, confirmableF
     options = []
     if securityEnabled:
         # have coap2 do a get with wrong context
-        clientContext = oscoap.SecurityContext(masterSecret=DUMMYMASTERSECRET,
+        clientContext = oscore.SecurityContext(masterSecret=DUMMYMASTERSECRET,
                                                senderID=DUMMYSERVERID,
                                                recipientID=DUMMYCLIENTID)
 

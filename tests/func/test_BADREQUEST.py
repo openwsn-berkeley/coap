@@ -11,13 +11,13 @@ import binascii
 from conftest import IPADDRESS1, \
                      RESOURCE, \
                      DUMMYVAL, \
-                     OSCOAPMASTERSECRET, \
-                     OSCOAPSERVERID, \
-                     OSCOAPCLIENTID
+                     OSCOREMASTERSECRET, \
+                     OSCORESERVERID, \
+                     OSCORECLIENTID
 from coap     import coapDefines as d, \
                      coapException as e, \
                      coapOption as o, \
-                     coapObjectSecurity as oscoap
+                     coapObjectSecurity as oscore
 
 #============================ logging =========================================
 
@@ -36,9 +36,9 @@ def test_BADREQUEST(logFixture, snoopyDispatcher, twoEndPoints, confirmableFixtu
     options = []
     if securityEnabled:
         # have coap2 do a get with the right IDs but wrong master secret
-        clientContext = oscoap.SecurityContext(masterSecret=DUMMYMASTERSECRET,
-                                               senderID=OSCOAPSERVERID,
-                                               recipientID=OSCOAPCLIENTID)
+        clientContext = oscore.SecurityContext(masterSecret=DUMMYMASTERSECRET,
+                                               senderID=OSCORESERVERID,
+                                               recipientID=OSCORECLIENTID)
 
         clientOptions = [o.ObjectSecurity(context=clientContext)]
 

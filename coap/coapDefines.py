@@ -3,10 +3,10 @@ COAP_VERSION                           = 1
 COAP_PAYLOAD_MARKER                    = 0xff
 COAP_SCHEME                            = 'coap://'
 
-# OSCOAP option classes
-OSCOAP_CLASS_E                         = 'E'  # encrypted and integrity protected
-OSCOAP_CLASS_I                         = 'I'  # integrity protected
-OSCOAP_CLASS_U                         = 'U'  # unprotected
+# OSCORE option classes
+OSCORE_CLASS_E                         = 'E'  # encrypted and integrity protected
+OSCORE_CLASS_I                         = 'I'  # integrity protected
+OSCORE_CLASS_U                         = 'U'  # unprotected
 
 # Default transmission parameters
 DFLT_ACK_TIMEOUT                       = 20   # in s. 
@@ -154,7 +154,7 @@ FORMAT_ALL = [
     FORMAT_CBOR,
 ]
 
-# COSE defines for AES-CCM algorithm used in OSCoAP (c.f. draft-ietf-cose-msg-24)
+# COSE defines for AES-CCM algorithm used in OSCORE (c.f. draft-ietf-cose-msg-24)
 COSE_AES_CCM_16_64_128                 = 10
 COSE_AES_CCM_16_64_256                 = 11
 COSE_AES_CCM_64_64_128                 = 12

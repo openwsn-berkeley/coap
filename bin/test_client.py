@@ -8,7 +8,7 @@ import binascii
 
 from   coap import coap
 from coap import coapOption           as o
-from coap import coapObjectSecurity   as oscoap
+from coap import coapObjectSecurity   as oscore
 
 import logging_setup
 
@@ -17,12 +17,12 @@ SERVER_IP = '::1'
 # open
 c = coap.coap(udpPort=5000)
 
-context = oscoap.SecurityContext(masterSecret   = binascii.unhexlify('0102030405060708090a0b0c0d0e0f10'),
+context = oscore.SecurityContext(masterSecret   = binascii.unhexlify('0102030405060708090a0b0c0d0e0f10'),
                                  masterSalt     = binascii.unhexlify('9e7ca92223786340'),
                                  senderID       = binascii.unhexlify(''),
                                  recipientID    = binascii.unhexlify('01'),
                                  idContext      = binascii.unhexlify('37cbf3210017a2d3'),
-                                 aeadAlgorithm  = oscoap.AES_CCM_16_64_128())
+                                 aeadAlgorithm  = oscore.AES_CCM_16_64_128())
 
 objectSecurity = o.ObjectSecurity(context=context)
 

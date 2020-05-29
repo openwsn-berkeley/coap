@@ -10,7 +10,7 @@ import coapOption         as o
 import coapUtils          as u
 import coapException      as e
 import coapDefines        as d
-import coapObjectSecurity as oscoap
+import coapObjectSecurity as oscore
 
 def sortOptions(options):
     # TODO implement sorting when more options are implemented
@@ -47,13 +47,13 @@ def buildMessage(msgtype,token,code,messageId,options=[],payload=[],securityCont
             raise ValueError('token {0} too long'.format(token))
 
     if securityContext:
-        # invoke oscoap to protect the message
-        (protectedCode, outerOptions, newPayload) = oscoap.protectMessage(context=securityContext,
-                                                           version = d.COAP_VERSION,
-                                                           code = code,
-                                                           options = options,
-                                                           payload = payload,
-                                                           partialIV=partialIV)
+        # invoke oscore to protect the message
+        (protectedCode, outerOptions, newPayload) = oscore.protectMessage(context=securityContext,
+                                                                          version = d.COAP_VERSION,
+                                                                          code = code,
+                                                                          options = options,
+                                                                          payload = payload,
+                                                                          partialIV=partialIV)
     else:
         (protectedCode, outerOptions, newPayload) = (code, options, payload)
 
@@ -107,11 +107,11 @@ def parseMessage(message):
     (returnVal['options'], payload) = decodeOptionsAndPayload(message)
 
     # if object security option is present decode the value in order to be able to decrypt the message
-    objectSecurity = oscoap.objectSecurityOptionLookUp(returnVal['options'])
+    objectSecurity = oscore.objectSecurityOptionLookUp(returnVal['options'])
     if objectSecurity:
-        oscoapDict = oscoap.parseObjectSecurity(objectSecurity.getPayloadBytes(), payload)
-        objectSecurity.setKid(oscoapDict['kid'])
-        returnVal.update(oscoapDict)
+        oscoreDict = oscore.parseObjectSecurity(objectSecurity.getPayloadBytes(), payload)
+        objectSecurity.setKid(oscoreDict['kid'])
+        returnVal.update(oscoreDict)
     else:
         returnVal['payload'] = payload
 

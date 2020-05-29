@@ -17,7 +17,7 @@ import snoopyDispatcher as snoopyDis
 from coap import coap, \
                  coapDefines        as d,       \
                  coapResource,                  \
-                 coapObjectSecurity as oscoap
+                 coapObjectSecurity as oscore
 
 #============================ logging =========================================
 
@@ -47,9 +47,9 @@ IPADDRESS2          = 'aaaa::2'
 RESOURCE            = 'res'
 DUMMYVAL            = [0x00,0x01,0x02]
 
-OSCOAPMASTERSECRET  = binascii.unhexlify('000102030405060708090A0B0C0D0E0F')
-OSCOAPSERVERID      = binascii.unhexlify('01')
-OSCOAPCLIENTID      = binascii.unhexlify('')
+OSCOREMASTERSECRET  = binascii.unhexlify('000102030405060708090A0B0C0D0E0F')
+OSCORESERVERID      = binascii.unhexlify('01')
+OSCORECLIENTID      = binascii.unhexlify('')
 
 #============================ fixtures ========================================
 
@@ -177,9 +177,9 @@ def twoEndPoints(request):
     newResource = dummyResource()
 
     if request.param == True: # if testing with security, protect the resource with security context
-        context = oscoap.SecurityContext(masterSecret=OSCOAPMASTERSECRET,
-                                         senderID=OSCOAPCLIENTID,
-                                         recipientID=OSCOAPSERVERID)
+        context = oscore.SecurityContext(masterSecret=OSCOREMASTERSECRET,
+                                         senderID=OSCORECLIENTID,
+                                         recipientID=OSCORESERVERID)
 
         # add resource - context binding with authorized methods
         newResource.addSecurityBinding((context, d.METHOD_ALL))

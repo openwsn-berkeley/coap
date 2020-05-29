@@ -15,7 +15,7 @@ from coap     import coapDefines as d, \
                      coapResource, \
                      coapException as e, \
                      coapOption as o, \
-                     coapObjectSecurity as oscoap
+                     coapObjectSecurity as oscore
 
 #============================ logging =========================================
 
@@ -54,13 +54,13 @@ def test_GET(logFixture,snoopyDispatcher,twoEndPoints):
     clientOptions = []
     buggyRes = buggyResource()
     if securityEnabled:
-        clientContext = oscoap.SecurityContext(masterSecret=DUMMYMASTERSECRET,
-                                         senderID=DUMMYSERVERID,
-                                         recipientID=DUMMYCLIENTID)
+        clientContext = oscore.SecurityContext(masterSecret=DUMMYMASTERSECRET,
+                                               senderID=DUMMYSERVERID,
+                                               recipientID=DUMMYCLIENTID)
 
         clientOptions = [o.ObjectSecurity(context=clientContext)]
 
-        serverContext = oscoap.SecurityContext(masterSecret=DUMMYMASTERSECRET,
+        serverContext = oscore.SecurityContext(masterSecret=DUMMYMASTERSECRET,
                                                senderID=DUMMYCLIENTID,
                                                recipientID=DUMMYSERVERID)
 

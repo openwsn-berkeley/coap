@@ -83,7 +83,7 @@ class coapTransmitter(threading.Thread):
             This function does not parse this payload, which is written as-is
             in the CoAP request.
         \param[in] securityContext Security context used for protection of the request
-        \param[in] requestSeq OSCOAP's sequence number from the request.
+        \param[in] requestSeq OSCORE's sequence number from the request.
         \param[in] ackTimeout The ACK timeout.
         \param[in] respTimeout The app-level response timeout.
         '''

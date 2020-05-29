@@ -18,7 +18,7 @@ import coapException        as e
 import coapResource         as r
 import coapDefines          as d
 import coapOption           as o
-import coapObjectSecurity   as oscoap
+import coapObjectSecurity   as oscore
 import coapUri
 import coapTransmitter
 from socketUdpDispatcher import socketUdpDispatcher
@@ -133,7 +133,7 @@ class coap(object):
 
         (host,destPort,uriOptions) = coapUri.uri2options(uri)
         destIp = socket.getaddrinfo(host, destPort)[0][4][0]
-        (securityContext, sequenceNumber) = oscoap.getRequestSecurityParams(oscoap.objectSecurityOptionLookUp(options))
+        (securityContext, sequenceNumber) = oscore.getRequestSecurityParams(oscore.objectSecurityOptionLookUp(options))
 
         with self.transmittersLock:
             self._cleanupTransmitter()
@@ -165,17 +165,17 @@ class coap(object):
 
         if securityContext:
             try:
-                (decryptedCode, innerOptions, plaintext) = oscoap.unprotectMessage(securityContext,
-                                                                    version=response['version'],
-                                                                    code=response['code'],
-                                                                    options=response['options'],
-                                                                    ciphertext=response['ciphertext'],
-                                                                    partialIV=sequenceNumber,
-                                                                    )
+                (decryptedCode, innerOptions, plaintext) = oscore.unprotectMessage(securityContext,
+                                                                                   version=response['version'],
+                                                                                   code=response['code'],
+                                                                                   options=response['options'],
+                                                                                   ciphertext=response['ciphertext'],
+                                                                                   partialIV=sequenceNumber,
+                                                                                   )
                 response['code']    = decryptedCode
                 response['options'] = response['options'] + innerOptions
                 response['payload'] = plaintext
-            except e.oscoapError:
+            except e.oscoreError:
                 raise
 
         return response
@@ -277,17 +277,17 @@ class coap(object):
 
                     # decrypt the message
                     try:
-                        (decryptedCode, innerOptions, plaintext) = oscoap.unprotectMessage(foundContext,
-                                                                          version=message['version'],
-                                                                          code=message['code'],
-                                                                          options=message['options'],
-                                                                          ciphertext=message['ciphertext'],
-                                                                          partialIV=requestPartialIV
-                                                                            )
+                        (decryptedCode, innerOptions, plaintext) = oscore.unprotectMessage(foundContext,
+                                                                                           version=message['version'],
+                                                                                           code=message['code'],
+                                                                                           options=message['options'],
+                                                                                           ciphertext=message['ciphertext'],
+                                                                                           partialIV=requestPartialIV
+                                                                                           )
                         message['code'] = decryptedCode
 
-                    except e.oscoapError as err:
-                        raise e.coapRcBadRequest('OSCOAP unprotect failed: {0}'.format(str(err)))
+                    except e.oscoreError as err:
+                        raise e.coapRcBadRequest('OSCORE unprotect failed: {0}'.format(str(err)))
 
                     payload = plaintext
                 else: # message not encrypted
@@ -320,7 +320,7 @@ class coap(object):
                     if context != foundContext:
                         raise e.coapRcUnauthorized('Unauthorized security context for the given resource')
 
-                objectSecurity = oscoap.objectSecurityOptionLookUp(options)
+                objectSecurity = oscore.objectSecurityOptionLookUp(options)
                 if objectSecurity:
                     objectSecurity.setContext(foundContext)
                 #==== get a response
@@ -378,7 +378,7 @@ class coap(object):
                         respOptions += [option]
                         break
 
-                # build response packets and pass partialIV from the request for OSCOAP's processing
+                # build response packets and pass partialIV from the request for OSCORE's processing
                 response = m.buildMessage(
                     msgtype          = responseType,
                     token            = message['token'],

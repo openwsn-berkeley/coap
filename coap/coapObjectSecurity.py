@@ -25,7 +25,7 @@ log.addHandler(NullHandler())
 
 def protectMessage(context, version, code, options=[], payload=[], partialIV=None):
     """
-    A function which protects the outgoing CoAP message using OSCOAP accoring to draft-ietf-core-object-security-03.
+    A function which protects the outgoing CoAP message using OSCORE according to rfc8613
     :param context security context to use to protect the outgoing message.
     :param version CoAP version field of the outgoing message.
     :param code CoAP code field of the outgoing message.
@@ -80,15 +80,15 @@ def protectMessage(context, version, code, options=[], payload=[], partialIV=Non
     else:
         protectedCode = d.METHOD_POST
 
-    # encode according to OSCOAP draft
+    # encode according to rfc8613
     objectSecurityOption.setValue(_encodeCompressedCOSE(requestSeq, requestKid, context.idContext))
 
     return (protectedCode, optionsClassI + optionsClassU, u.str2buf(ciphertext))
 
 def unprotectMessage(context, version, code, options=[], ciphertext=[], partialIV=None):
     """
-    A function which verifies and decrypts the incoming CoAP message using OSCOAP according to
-    draft-ietf-core-object-security-03.
+    A function which verifies and decrypts the incoming CoAP message using OSCORE according to
+    rfc8613.
 
     :param context security context to use to verify+decrypt the outgoing message.
     :param version CoAP version field of the incoming message.
@@ -108,12 +108,12 @@ def unprotectMessage(context, version, code, options=[], ciphertext=[], partialI
     (optionsClassE, optionsClassI, optionsClassU) = _splitOptions(options)
 
     if optionsClassE:
-        raise e.messageFormatError('invalid oscoap message. E-class option present in the outer message')
+        raise e.messageFormatError('invalid oscore message. E-class option present in the outer message')
 
     if _isRequest(code):
         requestKid = context.recipientID
         if not context.replayWindowLookup(u.buf2int(u.str2buf(partialIV))):
-            raise e.oscoapError('Replay protection failed')
+            raise e.oscoreError('Replay protection failed')
     else:
         requestKid = context.senderID
 
@@ -133,7 +133,7 @@ def unprotectMessage(context, version, code, options=[], ciphertext=[], partialI
             ciphertext=u.buf2str(ciphertext),
             key=context.recipientKey,
             nonce=nonce)
-    except e.oscoapError:
+    except e.oscoreError:
         raise
 
     if _isRequest(code):
@@ -161,7 +161,7 @@ def parseObjectSecurity(optionValue, payload):
     reserved = (optionValue[0] >> 5) & 0x07
 
     if reserved:
-        raise e.messageFormatError('invalid oscoap message. reserved bits set.')
+        raise e.messageFormatError('invalid oscore message. reserved bits set.')
 
     optionValue = optionValue[1:]
 
@@ -292,11 +292,11 @@ def _splitOptions(options):
     classU = []
 
     for option in options:
-        if option.oscoapClass == d.OSCOAP_CLASS_E:
+        if option.oscoreClass == d.OSCORE_CLASS_E:
             classE += [option]
-        if option.oscoapClass == d.OSCOAP_CLASS_I:
+        if option.oscoreClass == d.OSCORE_CLASS_I:
             classI += [option]
-        if option.oscoapClass == d.OSCOAP_CLASS_U:
+        if option.oscoreClass == d.OSCORE_CLASS_U:
             classU += [option]
     return (classE, classI, classU)
 
@@ -343,10 +343,10 @@ class CCMAlgorithm(object):
 
     def authenticateAndEncrypt(self, aad, plaintext, key, nonce):
         if self.keyLength != len(key):
-            raise e.oscoapError('Key length mismatch.')
+            raise e.oscoreError('Key length mismatch.')
 
         if self.ivLength != len(nonce):
-            raise e.oscoapError('IV length mismatch.')
+            raise e.oscoreError('IV length mismatch.')
 
         cipher = AES.new(key, AES.MODE_CCM, nonce, mac_len=self.tagLength)
         if aad:
@@ -367,7 +367,7 @@ class CCMAlgorithm(object):
             cipher.verify(digest)
             return plaintext
         except ValueError:
-            raise e.oscoapError('Invalid tag verification.')
+            raise e.oscoreError('Invalid tag verification.')
 
 
 class AES_CCM_64_64_128(CCMAlgorithm):
@@ -393,7 +393,7 @@ class SecurityContext:
                  hashFunction=hashlib.sha256):
 
         if len(senderID) > aeadAlgorithm.maxIdLen or len(recipientID) > aeadAlgorithm.maxIdLen:
-            raise e.oscoapError('Max ID length for AEAD algorithm {0} is {1}.'.format(aeadAlgorithm.value, aeadAlgorithm.maxIdLen))
+            raise e.oscoreError('Max ID length for AEAD algorithm {0} is {1}.'.format(aeadAlgorithm.value, aeadAlgorithm.maxIdLen))
 
         # Common context
         self.aeadAlgorithm = aeadAlgorithm
@@ -445,7 +445,7 @@ class SecurityContext:
     def getSequenceNumber(self):
         self.sequenceNumber += 1
         if self.sequenceNumber > self.aeadAlgorithm.maxSequenceNumber:
-            raise e.oscoapError('Reached maximum sequence number.')
+            raise e.oscoreError('Reached maximum sequence number.')
         return self.sequenceNumber
 
     def getIVLength(self):
