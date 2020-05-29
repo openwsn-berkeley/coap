@@ -45,26 +45,26 @@ def buildMessage(msgtype,token,code,messageId,options=[],payload=[],securityCont
                 break
         if not TKL:
             raise ValueError('token {0} too long'.format(token))
-    
-    # header
-    message += [d.COAP_VERSION<<6 | msgtype<<4 | TKL]
-    message += [code]
-    message += u.int2buf(messageId,2)
-    message += u.int2buf(token,TKL)
-    
-    # options
-    options  = sortOptions(options)
 
     if securityContext:
         # invoke oscoap to protect the message
-        (outerOptions, newPayload) = oscoap.protectMessage(context=securityContext,
+        (protectedCode, outerOptions, newPayload) = oscoap.protectMessage(context=securityContext,
                                                            version = d.COAP_VERSION,
                                                            code = code,
                                                            options = options,
                                                            payload = payload,
                                                            partialIV=partialIV)
     else:
-        (outerOptions, newPayload) = (options, payload)
+        (protectedCode, outerOptions, newPayload) = (code, options, payload)
+
+    # header
+    message += [d.COAP_VERSION<<6 | msgtype<<4 | TKL]
+    message += [protectedCode]
+    message += u.int2buf(messageId,2)
+    message += u.int2buf(token,TKL)
+
+    # options
+    options  = sortOptions(options)
 
     # add encoded options
     message += encodeOptions(outerOptions)

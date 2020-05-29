@@ -165,13 +165,14 @@ class coap(object):
 
         if securityContext:
             try:
-                (innerOptions, plaintext) = oscoap.unprotectMessage(securityContext,
+                (decryptedCode, innerOptions, plaintext) = oscoap.unprotectMessage(securityContext,
                                                                     version=response['version'],
                                                                     code=response['code'],
                                                                     options=response['options'],
                                                                     ciphertext=response['ciphertext'],
                                                                     partialIV=sequenceNumber,
                                                                     )
+                response['code']    = decryptedCode
                 response['options'] = response['options'] + innerOptions
                 response['payload'] = plaintext
             except e.oscoapError:
@@ -276,13 +277,15 @@ class coap(object):
 
                     # decrypt the message
                     try:
-                        (innerOptions, plaintext) = oscoap.unprotectMessage(foundContext,
+                        (decryptedCode, innerOptions, plaintext) = oscoap.unprotectMessage(foundContext,
                                                                           version=message['version'],
                                                                           code=message['code'],
                                                                           options=message['options'],
                                                                           ciphertext=message['ciphertext'],
                                                                           partialIV=requestPartialIV
                                                                             )
+                        message['code'] = decryptedCode
+
                     except e.oscoapError as err:
                         raise e.coapRcBadRequest('OSCOAP unprotect failed: {0}'.format(str(err)))
 

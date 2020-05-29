@@ -46,6 +46,7 @@ def protectMessage(context, version, code, options=[], payload=[], partialIV=Non
 
     # construct plaintext
     plaintext = []
+    plaintext += [code]
     plaintext += m.encodeOptions(optionsClassE)
     plaintext += m.encodePayload(payload)
     plaintext = u.buf2str(plaintext)  # convert to string
@@ -54,20 +55,17 @@ def protectMessage(context, version, code, options=[], payload=[], partialIV=Non
 
     requestSeq = partialIV.lstrip('\0')
 
+    requestKid = context.senderID if _isRequest(code) else context.recipientID
+
     # construct nonce
-    if _isRequest(code):
-        requestKid = context.senderID
-        nonce = u.xorStrings(context.senderIV, partialIV)
-    else:  # response
-        requestKid = context.recipientID
-        nonce = u.xorStrings(u.flipFirstBit(context.senderIV), partialIV)
+    nonce = _constructAeadNonce(context.aeadAlgorithm, partialIV, requestKid, context.commonIV)
 
     aad = _constructAAD(version,
-                        code,
-                        u.buf2str(m.encodeOptions(optionsClassI)),
                         context.aeadAlgorithm.value,
                         requestKid,
-                        requestSeq)
+                        requestSeq,
+                        u.buf2str(m.encodeOptions(optionsClassI)),
+                        )
 
     ciphertext = context.aeadAlgorithm.authenticateAndEncrypt(
         aad=aad,
@@ -78,16 +76,14 @@ def protectMessage(context, version, code, options=[], payload=[], partialIV=Non
     if not _isRequest(code):  # do not encode sequence number and kid in the response
         requestSeq = []
         requestKid = []
+        protectedCode = d.COAP_RC_2_04_CHANGED
+    else:
+        protectedCode = d.METHOD_POST
 
     # encode according to OSCOAP draft
-    finalPayload = _encodeCompressedCOSE(requestSeq, requestKid, ciphertext)
+    objectSecurityOption.setValue(_encodeCompressedCOSE(requestSeq, requestKid, context.idContext))
 
-    if payload:
-        return (optionsClassI + optionsClassU, finalPayload)
-    else:
-        objectSecurityOption.setValue(finalPayload)
-        return (optionsClassI + optionsClassU, [])
-
+    return (protectedCode, optionsClassI + optionsClassU, u.str2buf(ciphertext))
 
 def unprotectMessage(context, version, code, options=[], ciphertext=[], partialIV=None):
     """
@@ -124,17 +120,12 @@ def unprotectMessage(context, version, code, options=[], ciphertext=[], partialI
     requestSeq = partialIV.lstrip('\0')
 
     aad = _constructAAD(version,
-                        code,
-                        u.buf2str(m.encodeOptions(optionsClassI)),
                         context.aeadAlgorithm.value,
                         requestKid,
-                        requestSeq)
+                        requestSeq,
+                        u.buf2str(m.encodeOptions(optionsClassI)),)
 
-    # construct nonce
-    if _isRequest(code):  # verifying request
-        nonce = u.xorStrings(context.recipientIV, partialIV)
-    else:  # verifying response
-        nonce = u.xorStrings(u.flipFirstBit(context.recipientIV), partialIV)
+    nonce = _constructAeadNonce(context.aeadAlgorithm, partialIV, requestKid, context.commonIV)
 
     try:
         plaintext = context.aeadAlgorithm.authenticateAndDecrypt(
@@ -148,13 +139,20 @@ def unprotectMessage(context, version, code, options=[], ciphertext=[], partialI
     if _isRequest(code):
         context.replayWindowUpdate(u.buf2int(u.str2buf(partialIV)))
 
-    # returns a tuple (innerOptions, payload)
-    return m.decodeOptionsAndPayload(u.str2buf(plaintext))
+    plaintextBuf = u.str2buf(plaintext)
+    decryptedCode = plaintextBuf[0]
+    plaintextBuf = plaintext[1:]
 
+    (innerOptions, payload) = m.decodeOptionsAndPayload(u.str2buf(plaintextBuf))
+    # returns a tuple (decryptedCode, innerOptions, payload)
+    return (decryptedCode, innerOptions, payload)
 
 def parseObjectSecurity(optionValue, payload):
 
     returnVal = {}
+
+    if len(optionValue) == 0:
+        optionValue = [0]
 
     # decode first byte
     n = (optionValue[0] >> 0) & 0x07
@@ -237,14 +235,45 @@ def _encodeCompressedCOSE(partialIV, kid, kidContext):
 
     return buffer
 
-def _constructAAD(version, code, optionsSerialized, aeadAlgorithm, requestKid, requestSeq):
+'''
+              <- nonce length minus 6 B -> <-- 5 bytes -->
+         +---+-------------------+--------+---------+-----+
+         | S |      padding      | ID_PIV | padding | PIV |----+
+         +---+-------------------+--------+---------+-----+    |
+                                                               |
+          <---------------- nonce length ---------------->     |
+         +------------------------------------------------+    |
+         |                   Common IV                    |->(XOR)
+         +------------------------------------------------+    |
+                                                               |
+          <---------------- nonce length ---------------->     |
+         +------------------------------------------------+    |
+         |                     Nonce                      |<---+
+         +------------------------------------------------+
+'''
+def _constructAeadNonce(aeadAlgorithm, piv, idPiv, commonIV):
+
+    nonceLen = aeadAlgorithm.ivLength
+
+    pivBuf = u.str2buf(piv.lstrip('\0'))
+    idPivBuf = u.str2buf(idPiv)
+
+    pivPadded = [0] * (5 - len(pivBuf)) + pivBuf
+    idPivPadded = [0] * (nonceLen - 6 - len(idPivBuf)) + idPivBuf
+
+    buf = [len(idPivBuf)] + idPivPadded + pivPadded
+
+    assert len(buf) == nonceLen
+
+    return u.xorStrings(commonIV, u.buf2str(buf))
+
+def _constructAAD(version, aeadAlgorithm, requestKid, requestSeq, optionsSerialized):
     externalAad = cbor.dumps([
         version,
-        code,
-        optionsSerialized,
-        aeadAlgorithm,
+        [aeadAlgorithm],
         requestKid,
-        requestSeq
+        requestSeq,
+        optionsSerialized
     ])
 
     # from https://tools.ietf.org/html/draft-ietf-cose-msg-24#section-5.3
