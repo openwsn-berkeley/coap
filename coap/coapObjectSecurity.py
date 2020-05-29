@@ -389,7 +389,7 @@ class AES_CCM_16_64_128(CCMAlgorithm):
 class SecurityContext:
     REPLAY_WINDOW_SIZE = 64
 
-    def __init__(self, masterSecret, senderID, recipientID, idContext=None, aeadAlgorithm=AES_CCM_64_64_128(), masterSalt='',
+    def __init__(self, masterSecret, senderID, recipientID, idContext=None, aeadAlgorithm=AES_CCM_16_64_128(), masterSalt='',
                  hashFunction=hashlib.sha256):
 
         if len(senderID) > aeadAlgorithm.maxIdLen or len(recipientID) > aeadAlgorithm.maxIdLen:
