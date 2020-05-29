@@ -73,15 +73,16 @@ def protectMessage(context, version, code, options=[], payload=[], partialIV=Non
         key=context.senderKey,
         nonce=nonce)
 
-    if not _isRequest(code):  # do not encode sequence number and kid in the response
-        requestSeq = []
-        requestKid = []
+    if not _isRequest(code):  # response
+        # do not encode sequence number, kid  or kid context in the OSCORE option value
+        objectSecurityOption.setValue(_encodeCompressedCOSE(None, None, None))
+        # code is always 2.04 Changed
         protectedCode = d.COAP_RC_2_04_CHANGED
-    else:
+    else: # request
+        # encode sequence number, kid and kid context
+        objectSecurityOption.setValue(_encodeCompressedCOSE(requestSeq, requestKid, context.idContext))
+        # code is always POST
         protectedCode = d.METHOD_POST
-
-    # encode according to rfc8613
-    objectSecurityOption.setValue(_encodeCompressedCOSE(requestSeq, requestKid, context.idContext))
 
     return (protectedCode, optionsClassI + optionsClassU, u.str2buf(ciphertext))
 
@@ -221,11 +222,13 @@ def _encodeCompressedCOSE(partialIV, kid, kidContext):
 
     h = 1 if kidContext is not None else 0
 
-    kidFlag = 1 if kid else 0
+    kidFlag = 1 if kid is not None else 0
 
-    buffer += [h << 4 | kidFlag << 3 | len(partialIV)]  # flag byte
+    partialIVLen = 0 if partialIV is None else len(partialIV)
 
-    if partialIV:
+    buffer += [h << 4 | kidFlag << 3 | partialIVLen]  # flag byte
+
+    if partialIVLen:
         buffer += u.str2buf(partialIV)
     if h:
         buffer += [len(kidContext)]
