@@ -235,14 +235,14 @@ class ObjectSecurity(coapOption):
     def __init__(self, context=None, payload=[], kid=None):
 
         # initialize parent
-        coapOption.__init__(self, d.OPTION_NUM_OBJECT_SECURITY, d.OSCOAP_CLASS_U)
+        coapOption.__init__(self, d.OPTION_NUM_OSCORE, d.OSCOAP_CLASS_U)
 
         self.context = context
         self.value = payload
         self.kid = kid
 
     def __repr__(self):
-        return 'ObjectSecurity(context={0},payload={1}, kid={2})'.format(self.context, self.value, self.kid)
+        return 'OSCORE(context={0},payload={1}, kid={2})'.format(self.context, self.value, self.kid)
 
     def setValue(self, payload):
         self.value = payload
@@ -371,7 +371,7 @@ def parseOption(message,previousOptionNumber):
         option = ContentFormat(cformat=optionValue)
     elif optionNumber==d.OPTION_NUM_BLOCK2:
         option = Block2(rawbytes=optionValue)
-    elif optionNumber==d.OPTION_NUM_OBJECT_SECURITY:
+    elif optionNumber==d.OPTION_NUM_OSCORE:
         option = ObjectSecurity(payload=optionValue)
     elif optionNumber==d.OPTION_NUM_PROXYSCHEME:
         option = ProxyScheme(scheme=''.join([chr(b) for b in optionValue]))

@@ -103,6 +103,7 @@ OPTION_NUM_ETAG                        = 4
 OPTION_NUM_IFNONEMATCH                 = 5
 OPTION_NUM_URIPORT                     = 7
 OPTION_NUM_LOCATIONPATH                = 8
+OPTION_NUM_OSCORE                      = 9 # rfc8613
 OPTION_NUM_URIPATH                     = 11
 OPTION_NUM_CONTENTFORMAT               = 12
 OPTION_NUM_MAXAGE                      = 14
@@ -113,7 +114,6 @@ OPTION_NUM_BLOCK2                      = 23
 OPTION_NUM_BLOCK1                      = 27
 OPTION_NUM_PROXYURI                    = 35
 OPTION_NUM_PROXYSCHEME                 = 39
-OPTION_NUM_OBJECT_SECURITY             = 21 # plugtest value
 OPTION_NUM_STATELESSPROXY              = 40 # experimental value
 OPTION_NUM_ALL = [
     OPTION_NUM_IFMATCH,
@@ -132,7 +132,7 @@ OPTION_NUM_ALL = [
     OPTION_NUM_BLOCK1,
     OPTION_NUM_PROXYURI,
     OPTION_NUM_PROXYSCHEME,
-    OPTION_NUM_OBJECT_SECURITY,
+    OPTION_NUM_OSCORE,
     OPTION_NUM_STATELESSPROXY,
 ]
 
