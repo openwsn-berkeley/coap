@@ -37,7 +37,7 @@ def buildMessage(msgtype,token,code,messageId,options=[],payload=[],securityCont
     message   = []
 
     TKL = 0
-    if token:
+    if token is not None:
         # determine token length
         for tokenLen in range(1,8+1):
             if token < (1<<(8*tokenLen)):
