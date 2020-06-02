@@ -4,6 +4,10 @@ from abc import ABCMeta
 
 import cbor
 import hkdf
+import json
+import sys
+import binascii
+import threading
 from Crypto.Cipher import AES
 
 import coapDefines as d
@@ -314,7 +318,6 @@ def _isRequest(code):
     else:
         raise NotImplementedError()
 
-
 class CCMAlgorithm(object):
     __metaclass__ = ABCMeta
 
@@ -394,21 +397,46 @@ class AES_CCM_16_64_128(CCMAlgorithm):
 class SecurityContext:
     REPLAY_WINDOW_SIZE = 64
 
-    def __init__(self, masterSecret, senderID, recipientID, idContext=None, aeadAlgorithm=AES_CCM_16_64_128(), masterSalt='',
-                 hashFunction=hashlib.sha256):
+    #def __init__(self, masterSecret, senderID, recipientID, idContext=None, aeadAlgorithm=AES_CCM_16_64_128(), masterSalt='',
+    #             hashFunction=hashlib.sha256):
+    def __init__(self, securityContextFilePath):
 
-        if len(senderID) > aeadAlgorithm.maxIdLen or len(recipientID) > aeadAlgorithm.maxIdLen:
-            raise e.oscoreError('Max ID length for AEAD algorithm {0} is {1}.'.format(aeadAlgorithm.value, aeadAlgorithm.maxIdLen))
+        self.securityContextFilePath = securityContextFilePath
+        self.lock     = threading.RLock()
 
-        # Common context
-        self.aeadAlgorithm = aeadAlgorithm
-        self.hashFunction = hashFunction
-        self.masterSecret = masterSecret
-        self.masterSalt = masterSalt
+        with open(self.securityContextFilePath, "r") as contextFile:
 
-        self.idContext = idContext
+            self.securityContext = json.load(contextFile)
 
-        # common IV
+            # Instantiate AEAD algorithm
+            aeadAlgorithmClassName = self.securityContext['aeadAlgorithm']
+            aeadAlgorithmClass = getattr(sys.modules[__name__], aeadAlgorithmClassName)
+            self.aeadAlgorithm = aeadAlgorithmClass()
+
+            # Instantiate the hash function
+            hashFunctionClassName = self.securityContext['hashFunction']
+            self.hashFunction = getattr(hashlib, hashFunctionClassName)
+
+            # mandatory parameters
+            self.masterSecret = binascii.unhexlify(self.securityContext['masterSecret'])
+            self.senderID = binascii.unhexlify(self.securityContext['senderID'])
+            self.recipientID = binascii.unhexlify(self.securityContext['recipientID'])
+
+            # optional parameters
+            if 'masterSalt' in self.securityContext:
+                self.masterSalt = binascii.unhexlify(self.securityContext['masterSalt'])
+            else:
+                self.masterSalt = ''
+
+            if 'idContext' in self.securityContext:
+                self.idContext = binascii.unhexlify(self.securityContext['idContext'])
+            else:
+                self.idContext = None
+
+            if len(self.senderID) > self.aeadAlgorithm.maxIdLen or len(self.recipientID) > self.aeadAlgorithm.maxIdLen:
+                raise e.oscoreError('Max ID length for AEAD algorithm {0} is {1}.'.format(self.aeadAlgorithm.value, self.aeadAlgorithm.maxIdLen))
+
+        # Derived parameters
         self.commonIV = self._hkdfDeriveParameter(self.hashFunction,
                                                   self.masterSecret,
                                                   self.masterSalt,
@@ -419,8 +447,6 @@ class SecurityContext:
                                                   self.aeadAlgorithm.ivLength
                                                   )
 
-        # Sender context
-        self.senderID = senderID
         self.senderKey = self._hkdfDeriveParameter(self.hashFunction,
                                                    self.masterSecret,
                                                    self.masterSalt,
@@ -430,10 +456,7 @@ class SecurityContext:
                                                    'Key',
                                                    self.aeadAlgorithm.keyLength
                                                    )
-        self.sequenceNumber = 0
 
-        # Recipient context
-        self.recipientID = recipientID
         self.recipientKey = self._hkdfDeriveParameter(self.hashFunction,
                                                       self.masterSecret,
                                                       self.masterSalt,
@@ -443,36 +466,49 @@ class SecurityContext:
                                                       'Key',
                                                       self.aeadAlgorithm.keyLength
                                                       )
-        self.replayWindow = [0]
+
 
     # ======================== public ==========================================
-
-    def getSequenceNumber(self):
-        self.sequenceNumber += 1
-        if self.sequenceNumber > self.aeadAlgorithm.maxSequenceNumber:
-            raise e.oscoreError('Reached maximum sequence number.')
-        return self.sequenceNumber
 
     def getIVLength(self):
         return self.aeadAlgorithm.ivLength
 
     def replayWindowLookup(self, sequenceNumber):
-        if sequenceNumber in self.replayWindow:
+        if sequenceNumber in self.securityContext['replayWindow']:
             return False
 
-        if sequenceNumber < min(self.replayWindow):
+        if sequenceNumber < min(self.securityContext['replayWindow']):
             return False
 
         return True
 
-    def replayWindowUpdate(self, sequenceNumber):
-        assert sequenceNumber > min(self.replayWindow)
-        assert sequenceNumber not in self.replayWindow
+    def replayWindowUpdate(self, sequenceNumber, reset=False):
+        assert sequenceNumber > min(self.securityContext['replayWindow'])
+        assert sequenceNumber not in self.securityContext['replayWindow']
 
-        if len(self.replayWindow) == self.REPLAY_WINDOW_SIZE:
-            self.replayWindow.remove(min(self.replayWindow))
+        with self.lock:
+            if len(self.securityContext['replayWindow']) == self.REPLAY_WINDOW_SIZE:
+                self.securityContext['replayWindow'].remove(min(self.securityContext['replayWindow']))
 
-        self.replayWindow += [sequenceNumber]
+            if reset is False:
+                self.securityContext['replayWindow'] += [sequenceNumber]
+            else:
+                self.securityContext['replayWindow'] = [sequenceNumber]
+
+            with open(self.securityContextFilePath, "w") as contextFile:
+                json.dump(self.securityContext, contextFile, indent=4, sort_keys=True)
+        return
+
+    def getSequenceNumber(self):
+        with self.lock:
+            self.securityContext['sequenceNumber'] += 1
+
+            if self.securityContext['sequenceNumber'] > self.aeadAlgorithm.maxSequenceNumber:
+                raise e.oscoreError('Reached maximum sequence number.')
+
+            with open(self.securityContextFilePath, "w") as contextFile:
+                json.dump(self.securityContext, contextFile, indent=4, sort_keys=True)
+        return self.securityContext['sequenceNumber']
 
     # ======================== private ==========================================
 
