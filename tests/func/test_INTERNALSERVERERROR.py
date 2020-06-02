@@ -10,7 +10,9 @@ import binascii
 
 from conftest import IPADDRESS1, \
                      RESOURCE, \
-                     DUMMYVAL
+                     DUMMYVAL, \
+                     OSCORECLIENTCONTEXT, \
+                     OSCORESERVERCONTEXT
 from coap     import coapDefines as d, \
                      coapResource, \
                      coapException as e, \
@@ -43,10 +45,6 @@ class buggyResource(coapResource.coapResource):
 
 #============================ tests ===========================================
 
-DUMMYMASTERSECRET  = binascii.unhexlify('DEADBEEFDEADBEEFDEADBEEF')
-DUMMYSERVERID      = binascii.unhexlify('CAFECAFECAFE')
-DUMMYCLIENTID      = binascii.unhexlify('FECAFECAFECA')
-
 def test_GET(logFixture,snoopyDispatcher,twoEndPoints):
     
     (coap1,coap2,securityEnabled) = twoEndPoints
@@ -54,18 +52,9 @@ def test_GET(logFixture,snoopyDispatcher,twoEndPoints):
     clientOptions = []
     buggyRes = buggyResource()
     if securityEnabled:
-        clientContext = oscore.SecurityContext(masterSecret=DUMMYMASTERSECRET,
-                                               senderID=DUMMYSERVERID,
-                                               recipientID=DUMMYCLIENTID)
+        clientContext = oscore.SecurityContext(OSCORECLIENTCONTEXT)
 
         clientOptions = [o.ObjectSecurity(context=clientContext)]
-
-        serverContext = oscore.SecurityContext(masterSecret=DUMMYMASTERSECRET,
-                                               senderID=DUMMYCLIENTID,
-                                               recipientID=DUMMYSERVERID)
-
-        buggyRes.addSecurityBinding((serverContext, d.METHOD_ALL))
-
 
     coap1.addResource(buggyRes)
     

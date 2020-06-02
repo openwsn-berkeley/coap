@@ -9,9 +9,7 @@ import pytest
 from conftest import IPADDRESS1, \
                      RESOURCE, \
                      DUMMYVAL, \
-                     OSCOREMASTERSECRET, \
-                     OSCORESERVERID, \
-                     OSCORECLIENTID
+                     OSCORECLIENTCONTEXT
 from coap     import coapDefines as d, \
                      coapException as e, \
                      coapOption as o, \
@@ -38,9 +36,7 @@ def test_GET(logFixture,snoopyDispatcher,twoEndPoints):
 
     options = []
     if securityEnabled:
-        context = oscore.SecurityContext(masterSecret=OSCOREMASTERSECRET,
-                                         senderID=OSCORESERVERID,
-                                         recipientID=OSCORECLIENTID)
+        context = oscore.SecurityContext(OSCORECLIENTCONTEXT)
 
         options = [o.ObjectSecurity(context=context)]
     

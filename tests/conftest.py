@@ -47,9 +47,10 @@ IPADDRESS2          = 'aaaa::2'
 RESOURCE            = 'res'
 DUMMYVAL            = [0x00,0x01,0x02]
 
-OSCOREMASTERSECRET  = binascii.unhexlify('000102030405060708090A0B0C0D0E0F')
-OSCORESERVERID      = binascii.unhexlify('01')
-OSCORECLIENTID      = binascii.unhexlify('')
+OSCORECLIENTCONTEXT             = os.path.join(here, "oscore_test_context_client.json")
+OSCORESERVERCONTEXT             = os.path.join(here, "oscore_test_context_server.json")
+OSCOREDUMMYMASTERSECRETCONTEXT  = os.path.join(here, "oscore_test_context_dummymastersecret.json")
+OSCOREDUMMYSENDERIDCONTEXT      = os.path.join(here, "oscore_test_context_dummysenderid.json")
 
 #============================ fixtures ========================================
 
@@ -177,9 +178,7 @@ def twoEndPoints(request):
     newResource = dummyResource()
 
     if request.param == True: # if testing with security, protect the resource with security context
-        context = oscore.SecurityContext(masterSecret=OSCOREMASTERSECRET,
-                                         senderID=OSCORECLIENTID,
-                                         recipientID=OSCORESERVERID)
+        context = oscore.SecurityContext(OSCORESERVERCONTEXT)
 
         # add resource - context binding with authorized methods
         newResource.addSecurityBinding((context, d.METHOD_ALL))

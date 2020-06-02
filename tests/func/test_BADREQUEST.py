@@ -4,6 +4,8 @@ import testUtils as utils
 import time
 import threading
 
+import os
+
 import pytest
 
 import binascii
@@ -11,9 +13,7 @@ import binascii
 from conftest import IPADDRESS1, \
                      RESOURCE, \
                      DUMMYVAL, \
-                     OSCOREMASTERSECRET, \
-                     OSCORESERVERID, \
-                     OSCORECLIENTID
+                     OSCOREDUMMYMASTERSECRETCONTEXT
 from coap     import coapDefines as d, \
                      coapException as e, \
                      coapOption as o, \
@@ -28,17 +28,13 @@ log.addHandler(utils.NullHandler())
 
 #============================ tests ===========================================
 
-DUMMYMASTERSECRET  = binascii.unhexlify('DEADBEEFDEADBEEFDEADBEEF')
-
 def test_BADREQUEST(logFixture, snoopyDispatcher, twoEndPoints, confirmableFixture):
     (coap1, coap2, securityEnabled) = twoEndPoints
 
     options = []
     if securityEnabled:
         # have coap2 do a get with the right IDs but wrong master secret
-        clientContext = oscore.SecurityContext(masterSecret=DUMMYMASTERSECRET,
-                                               senderID=OSCORESERVERID,
-                                               recipientID=OSCORECLIENTID)
+        clientContext = oscore.SecurityContext(OSCOREDUMMYMASTERSECRETCONTEXT)
 
         clientOptions = [o.ObjectSecurity(context=clientContext)]
 

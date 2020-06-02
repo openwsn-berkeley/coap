@@ -1,0 +1,13 @@
+{
+    "aeadAlgorithm": "AES_CCM_16_64_128", 
+    "hashFunction": "sha256", 
+    "idContext": "37cbf3210017a2d3", 
+    "masterSalt": "9e7ca92223786340", 
+    "masterSecret": "0102030405060708090a0b0c0d0e0f10", 
+    "recipientID": "", 
+    "replayWindow": [
+        0
+    ], 
+    "senderID": "01", 
+    "sequenceNumber": 0
+}
