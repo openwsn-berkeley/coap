@@ -111,6 +111,7 @@ def parseMessage(message):
     if objectSecurity:
         oscoreDict = oscore.parseObjectSecurity(objectSecurity.getPayloadBytes(), payload)
         objectSecurity.setKid(oscoreDict['kid'])
+        objectSecurity.setKidContext(oscoreDict['kidContext'])
         returnVal.update(oscoreDict)
     else:
         returnVal['payload'] = payload

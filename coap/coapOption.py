@@ -232,7 +232,7 @@ class ProxyScheme(coapOption):
 
 class ObjectSecurity(coapOption):
 
-    def __init__(self, context=None, payload=[], kid=None):
+    def __init__(self, context=None, payload=[], kid=None, kidContext=None):
 
         # initialize parent
         coapOption.__init__(self, d.OPTION_NUM_OSCORE, d.OSCORE_CLASS_U)
@@ -240,15 +240,19 @@ class ObjectSecurity(coapOption):
         self.context = context
         self.value = payload
         self.kid = kid
+        self.kidContext = kidContext
 
     def __repr__(self):
-        return 'OSCORE(context={0},payload={1}, kid={2})'.format(self.context, self.value, self.kid)
+        return 'OSCORE(context={0},payload={1}, kid={2}, kidContext={3})'.format(self.context, self.value, self.kid, self.kidContext)
 
     def setValue(self, payload):
         self.value = payload
 
     def setKid(self,kid):
         self.kid = kid
+
+    def setKidContext(self,kidContext):
+        self.kidContext = kidContext
 
     def setContext(self,context):
         self.context = context

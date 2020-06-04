@@ -265,7 +265,7 @@ class coap(object):
 
                     if not blindContext:
                         if self.secContextHandler:
-                            appContext = self.secContextHandler(u.buf2str(message['kid']))
+                            appContext = self.secContextHandler(u.buf2str(message['kid']), u.buf2str(message['kidContext']))
                             if not appContext:
                                 raise e.coapRcUnauthorized('Security context not found.')
                         else:
