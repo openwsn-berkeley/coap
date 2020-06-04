@@ -175,7 +175,7 @@ def parseObjectSecurity(optionValue, payload):
         returnVal['partialIV'] = optionValue[:n]
         optionValue = optionValue[n:]
 
-    returnVal['kidContext'] = []
+    returnVal['kidContext'] = None
     if h:
         kidContextLen = optionValue[0]
         optionValue = optionValue[1:]

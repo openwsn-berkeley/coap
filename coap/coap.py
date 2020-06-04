@@ -261,11 +261,12 @@ class coap(object):
                     # retrieve security context
                     # before decrypting we don't know what resource this request is meant for
                     # so we take the first binding with the correct context (recipientID)
-                    blindContext = self._securityContextLookup(u.buf2str(message['kid']))
+                    kidContext = u.buf2str(message['kidContext']) if message['kidContext'] is not None else None
+                    blindContext = self._securityContextLookup(u.buf2str(message['kid']), kidContext)
 
                     if not blindContext:
                         if self.secContextHandler:
-                            appContext = self.secContextHandler(u.buf2str(message['kid']), u.buf2str(message['kidContext']))
+                            appContext = self.secContextHandler(u.buf2str(message['kid']), kidContext)
                             if not appContext:
                                 raise e.coapRcUnauthorized('Security context not found.')
                         else:
@@ -469,11 +470,11 @@ class coap(object):
         except Exception as err:
             log.critical(traceback.format_exc())
 
-    def _securityContextLookup(self, keyID):
+    def _securityContextLookup(self, keyID, keyIDContext):
         with self.resourceLock:
             for r in self.resources:
                 (ctx, authzMethods) = r.getSecurityBinding()
                 if ctx:
-                    if keyID == ctx.recipientID:
+                    if keyID == ctx.recipientID and keyIDContext == ctx.idContext:
                         return ctx
             return None
