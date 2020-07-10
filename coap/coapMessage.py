@@ -10,7 +10,7 @@ import coapOption         as o
 import coapUtils          as u
 import coapException      as e
 import coapDefines        as d
-import coapObjectSecurity as oscoap
+import coapObjectSecurity as oscore
 
 def sortOptions(options):
     # TODO implement sorting when more options are implemented
@@ -37,7 +37,7 @@ def buildMessage(msgtype,token,code,messageId,options=[],payload=[],securityCont
     message   = []
 
     TKL = 0
-    if token:
+    if token is not None:
         # determine token length
         for tokenLen in range(1,8+1):
             if token < (1<<(8*tokenLen)):
@@ -45,26 +45,26 @@ def buildMessage(msgtype,token,code,messageId,options=[],payload=[],securityCont
                 break
         if not TKL:
             raise ValueError('token {0} too long'.format(token))
-    
-    # header
-    message += [d.COAP_VERSION<<6 | msgtype<<4 | TKL]
-    message += [code]
-    message += u.int2buf(messageId,2)
-    message += u.int2buf(token,TKL)
-    
-    # options
-    options  = sortOptions(options)
 
     if securityContext:
-        # invoke oscoap to protect the message
-        (outerOptions, newPayload) = oscoap.protectMessage(context=securityContext,
-                                                           version = d.COAP_VERSION,
-                                                           code = code,
-                                                           options = options,
-                                                           payload = payload,
-                                                           partialIV=partialIV)
+        # invoke oscore to protect the message
+        (protectedCode, outerOptions, newPayload) = oscore.protectMessage(context=securityContext,
+                                                                          version = d.COAP_VERSION,
+                                                                          code = code,
+                                                                          options = options,
+                                                                          payload = payload,
+                                                                          partialIV=partialIV)
     else:
-        (outerOptions, newPayload) = (options, payload)
+        (protectedCode, outerOptions, newPayload) = (code, options, payload)
+
+    # header
+    message += [d.COAP_VERSION<<6 | msgtype<<4 | TKL]
+    message += [protectedCode]
+    message += u.int2buf(messageId,2)
+    message += u.int2buf(token,TKL)
+
+    # options
+    options  = sortOptions(options)
 
     # add encoded options
     message += encodeOptions(outerOptions)
@@ -107,11 +107,12 @@ def parseMessage(message):
     (returnVal['options'], payload) = decodeOptionsAndPayload(message)
 
     # if object security option is present decode the value in order to be able to decrypt the message
-    objectSecurity = oscoap.objectSecurityOptionLookUp(returnVal['options'])
+    objectSecurity = oscore.objectSecurityOptionLookUp(returnVal['options'])
     if objectSecurity:
-        oscoapDict = oscoap.parseObjectSecurity(objectSecurity.getPayloadBytes(), payload)
-        objectSecurity.setKid(oscoapDict['kid'])
-        returnVal.update(oscoapDict)
+        oscoreDict = oscore.parseObjectSecurity(objectSecurity.getPayloadBytes(), payload)
+        objectSecurity.setKid(oscoreDict['kid'])
+        objectSecurity.setKidContext(oscoreDict['kidContext'])
+        returnVal.update(oscoreDict)
     else:
         returnVal['payload'] = payload
 

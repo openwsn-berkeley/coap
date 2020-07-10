@@ -8,7 +8,7 @@ import binascii
 from   coap   import    coap,                            \
                         coapResource,                    \
                         coapDefines         as d,        \
-                        coapObjectSecurity  as oscoap
+                        coapObjectSecurity  as oscore
 import logging_setup
 
 class testResource(coapResource.coapResource):
@@ -35,10 +35,7 @@ c = coap.coap(ipAddress='::1')
 
 testResource = testResource()
 
-context = oscoap.SecurityContext(masterSecret   = binascii.unhexlify('000102030405060708090A0B0C0D0E0F'),
-                                 senderID       = binascii.unhexlify('736572766572'),
-                                 recipientID    = binascii.unhexlify('636c69656e74'),
-                                 aeadAlgorithm  = oscoap.AES_CCM_16_64_128())
+context = oscore.SecurityContext(securityContextFilePath="oscore_context_server.json")
 
 # add resource - context binding with authorized methods
 testResource.addSecurityBinding((context, d.METHOD_ALL))

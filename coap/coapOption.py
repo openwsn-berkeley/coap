@@ -14,11 +14,11 @@ import coapDefines   as d
 
 class coapOption(object):
     
-    def __init__(self,optionNumber, oscoapClass=d.OSCOAP_CLASS_E):
+    def __init__(self, optionNumber, oscoreClass=d.OSCORE_CLASS_E):
         
         # store params
         self.optionNumber = optionNumber
-        self.oscoapClass  = oscoapClass
+        self.oscoreClass  = oscoreClass
         self.length       = 0
     
     #======================== abstract methods ================================
@@ -74,7 +74,7 @@ class coapOption(object):
 class UriHost(coapOption):
     def __init__(self, host):
         # initialize parent
-        coapOption.__init__(self, d.OPTION_NUM_URIHOST, d.OSCOAP_CLASS_U)
+        coapOption.__init__(self, d.OPTION_NUM_URIHOST, d.OSCORE_CLASS_U)
 
         # store params
         self.host = host
@@ -100,7 +100,7 @@ class UriPath(coapOption):
     def __init__(self,path):
         
         # initialize parent
-        coapOption.__init__(self,d.OPTION_NUM_URIPATH, d.OSCOAP_CLASS_E)
+        coapOption.__init__(self, d.OPTION_NUM_URIPATH, d.OSCORE_CLASS_E)
         
         # store params
         self.path = path
@@ -124,7 +124,7 @@ class ContentFormat(coapOption):
         assert cformat[0] in d.FORMAT_ALL
         
         # initialize parent
-        coapOption.__init__(self,d.OPTION_NUM_CONTENTFORMAT, d.OSCOAP_CLASS_E)
+        coapOption.__init__(self, d.OPTION_NUM_CONTENTFORMAT, d.OSCORE_CLASS_E)
         
         # store params
         self.format = cformat[0]
@@ -147,7 +147,7 @@ class Accept(coapOption):
         assert accept[0] in d.FORMAT_ALL
 
         # initialize parent
-        coapOption.__init__(self, d.OPTION_NUM_ACCEPT, d.OSCOAP_CLASS_E)
+        coapOption.__init__(self, d.OPTION_NUM_ACCEPT, d.OSCORE_CLASS_E)
 
         # store params
         self.accept = accept[0]
@@ -177,7 +177,7 @@ class Block2(coapOption):
             assert szx!=None
         
         # initialize parent
-        coapOption.__init__(self,d.OPTION_NUM_BLOCK2, d.OSCOAP_CLASS_E)
+        coapOption.__init__(self, d.OPTION_NUM_BLOCK2, d.OSCORE_CLASS_E)
         
         # store params
         if num:
@@ -217,7 +217,7 @@ class Block2(coapOption):
 class ProxyScheme(coapOption):
     def __init__(self, scheme):
         # initialize parent
-        coapOption.__init__(self, d.OPTION_NUM_PROXYSCHEME, d.OSCOAP_CLASS_U)
+        coapOption.__init__(self, d.OPTION_NUM_PROXYSCHEME, d.OSCORE_CLASS_U)
 
         # store params
         self.scheme = scheme
@@ -232,23 +232,27 @@ class ProxyScheme(coapOption):
 
 class ObjectSecurity(coapOption):
 
-    def __init__(self, context=None, payload=[], kid=None):
+    def __init__(self, context=None, payload=[], kid=None, kidContext=None):
 
         # initialize parent
-        coapOption.__init__(self, d.OPTION_NUM_OBJECT_SECURITY, d.OSCOAP_CLASS_U)
+        coapOption.__init__(self, d.OPTION_NUM_OSCORE, d.OSCORE_CLASS_U)
 
         self.context = context
         self.value = payload
         self.kid = kid
+        self.kidContext = kidContext
 
     def __repr__(self):
-        return 'ObjectSecurity(context={0},payload={1}, kid={2})'.format(self.context, self.value, self.kid)
+        return 'OSCORE(context={0},payload={1}, kid={2}, kidContext={3})'.format(self.context, self.value, self.kid, self.kidContext)
 
     def setValue(self, payload):
         self.value = payload
 
     def setKid(self,kid):
         self.kid = kid
+
+    def setKidContext(self,kidContext):
+        self.kidContext = kidContext
 
     def setContext(self,context):
         self.context = context
@@ -261,7 +265,7 @@ class ObjectSecurity(coapOption):
 class StatelessProxy(coapOption):
     def __init__(self, value):
         # initialize parent
-        coapOption.__init__(self, d.OPTION_NUM_STATELESSPROXY, d.OSCOAP_CLASS_U)
+        coapOption.__init__(self, d.OPTION_NUM_STATELESSPROXY, d.OSCORE_CLASS_U)
 
         # store params
         self.opaqueValue = value
@@ -371,7 +375,7 @@ def parseOption(message,previousOptionNumber):
         option = ContentFormat(cformat=optionValue)
     elif optionNumber==d.OPTION_NUM_BLOCK2:
         option = Block2(rawbytes=optionValue)
-    elif optionNumber==d.OPTION_NUM_OBJECT_SECURITY:
+    elif optionNumber==d.OPTION_NUM_OSCORE:
         option = ObjectSecurity(payload=optionValue)
     elif optionNumber==d.OPTION_NUM_PROXYSCHEME:
         option = ProxyScheme(scheme=''.join([chr(b) for b in optionValue]))

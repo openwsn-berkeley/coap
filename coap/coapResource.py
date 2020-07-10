@@ -8,7 +8,6 @@ log.addHandler(NullHandler())
 
 import coapException        as e
 import coapDefines          as d
-import coapObjectSecurity   as oscoap
 
 class coapResource(object):
     
@@ -64,4 +63,3 @@ class coapResource(object):
         else:
             # if no context is bound to the resource, all methods are authorized
             return (None, d.METHOD_ALL)
-

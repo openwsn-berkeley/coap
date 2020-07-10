@@ -3,10 +3,10 @@ COAP_VERSION                           = 1
 COAP_PAYLOAD_MARKER                    = 0xff
 COAP_SCHEME                            = 'coap://'
 
-# OSCOAP option classes
-OSCOAP_CLASS_E                         = 'E'  # encrypted and integrity protected
-OSCOAP_CLASS_I                         = 'I'  # integrity protected
-OSCOAP_CLASS_U                         = 'U'  # unprotected
+# OSCORE option classes
+OSCORE_CLASS_E                         = 'E'  # encrypted and integrity protected
+OSCORE_CLASS_I                         = 'I'  # integrity protected
+OSCORE_CLASS_U                         = 'U'  # unprotected
 
 # Default transmission parameters
 DFLT_ACK_TIMEOUT                       = 20   # in s. 
@@ -103,6 +103,7 @@ OPTION_NUM_ETAG                        = 4
 OPTION_NUM_IFNONEMATCH                 = 5
 OPTION_NUM_URIPORT                     = 7
 OPTION_NUM_LOCATIONPATH                = 8
+OPTION_NUM_OSCORE                      = 9 # rfc8613
 OPTION_NUM_URIPATH                     = 11
 OPTION_NUM_CONTENTFORMAT               = 12
 OPTION_NUM_MAXAGE                      = 14
@@ -113,7 +114,6 @@ OPTION_NUM_BLOCK2                      = 23
 OPTION_NUM_BLOCK1                      = 27
 OPTION_NUM_PROXYURI                    = 35
 OPTION_NUM_PROXYSCHEME                 = 39
-OPTION_NUM_OBJECT_SECURITY             = 21 # plugtest value
 OPTION_NUM_STATELESSPROXY              = 40 # experimental value
 OPTION_NUM_ALL = [
     OPTION_NUM_IFMATCH,
@@ -132,7 +132,7 @@ OPTION_NUM_ALL = [
     OPTION_NUM_BLOCK1,
     OPTION_NUM_PROXYURI,
     OPTION_NUM_PROXYSCHEME,
-    OPTION_NUM_OBJECT_SECURITY,
+    OPTION_NUM_OSCORE,
     OPTION_NUM_STATELESSPROXY,
 ]
 
@@ -154,7 +154,7 @@ FORMAT_ALL = [
     FORMAT_CBOR,
 ]
 
-# COSE defines for AES-CCM algorithm used in OSCoAP (c.f. draft-ietf-cose-msg-24)
+# COSE defines for AES-CCM algorithm used in OSCORE (c.f. draft-ietf-cose-msg-24)
 COSE_AES_CCM_16_64_128                 = 10
 COSE_AES_CCM_16_64_256                 = 11
 COSE_AES_CCM_64_64_128                 = 12

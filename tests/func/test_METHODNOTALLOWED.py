@@ -9,13 +9,11 @@ import pytest
 from conftest import IPADDRESS1, \
                      RESOURCE, \
                      DUMMYVAL, \
-                     OSCOAPMASTERSECRET, \
-                     OSCOAPSERVERID, \
-                     OSCOAPCLIENTID
+                     OSCORECLIENTCONTEXT
 from coap     import coapDefines as d, \
                      coapException as e, \
                      coapOption as o, \
-                     coapObjectSecurity as oscoap
+                     coapObjectSecurity as oscore
 
 #============================ logging =========================================
 
@@ -32,9 +30,7 @@ def test_METHODNOTALLOWED(logFixture,snoopyDispatcher,twoEndPoints,confirmableFi
 
     options = []
     if securityEnabled:
-        context = oscoap.SecurityContext(masterSecret   = OSCOAPMASTERSECRET,
-                                         senderID       = OSCOAPSERVERID,
-                                         recipientID    = OSCOAPCLIENTID)
+        context = oscore.SecurityContext(OSCORECLIENTCONTEXT)
 
         options = [o.ObjectSecurity(context=context)]
     

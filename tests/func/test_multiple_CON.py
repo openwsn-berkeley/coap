@@ -6,14 +6,11 @@ import threading
 
 from conftest import IPADDRESS1, \
                      RESOURCE, \
-                     DUMMYVAL, \
-                     OSCOAPMASTERSECRET, \
-                     OSCOAPSERVERID, \
-                     OSCOAPCLIENTID
-
+                     DUMMYVAL,\
+                     OSCORECLIENTCONTEXT
 from coap     import coapDefines as d, \
                      coapOption as o, \
-                     coapObjectSecurity as oscoap
+                     coapObjectSecurity as oscore
 
 #============================ logging ===============================
 
@@ -28,9 +25,7 @@ def test_GET(logFixture,snoopyDispatcher,twoEndPoints):
 
     options = []
     if securityEnabled:
-        context = oscoap.SecurityContext(masterSecret   = OSCOAPMASTERSECRET,
-                                         senderID       = OSCOAPSERVERID,
-                                         recipientID    = OSCOAPCLIENTID)
+        context = oscore.SecurityContext(OSCORECLIENTCONTEXT)
 
         options = [o.ObjectSecurity(context=context)]
     
@@ -38,7 +33,7 @@ def test_GET(logFixture,snoopyDispatcher,twoEndPoints):
     for _ in range(20):
         reply = coap2.GET(
             uri         = 'coap://[{0}]:{1}/{2}/'.format(IPADDRESS1,d.DEFAULT_UDP_PORT,RESOURCE),
-            confirmable = False,
+            confirmable = True,
             options=options
         )
         assert reply==DUMMYVAL

@@ -4,6 +4,10 @@ from abc import ABCMeta
 
 import cbor
 import hkdf
+import json
+import sys
+import binascii
+import threading
 from Crypto.Cipher import AES
 
 import coapDefines as d
@@ -25,7 +29,7 @@ log.addHandler(NullHandler())
 
 def protectMessage(context, version, code, options=[], payload=[], partialIV=None):
     """
-    A function which protects the outgoing CoAP message using OSCOAP accoring to draft-ietf-core-object-security-03.
+    A function which protects the outgoing CoAP message using OSCORE according to rfc8613
     :param context security context to use to protect the outgoing message.
     :param version CoAP version field of the outgoing message.
     :param code CoAP code field of the outgoing message.
@@ -46,6 +50,7 @@ def protectMessage(context, version, code, options=[], payload=[], partialIV=Non
 
     # construct plaintext
     plaintext = []
+    plaintext += [code]
     plaintext += m.encodeOptions(optionsClassE)
     plaintext += m.encodePayload(payload)
     plaintext = u.buf2str(plaintext)  # convert to string
@@ -54,20 +59,17 @@ def protectMessage(context, version, code, options=[], payload=[], partialIV=Non
 
     requestSeq = partialIV.lstrip('\0')
 
+    requestKid = context.senderID if _isRequest(code) else context.recipientID
+
     # construct nonce
-    if _isRequest(code):
-        requestKid = context.senderID
-        nonce = u.xorStrings(context.senderIV, partialIV)
-    else:  # response
-        requestKid = context.recipientID
-        nonce = u.xorStrings(u.flipFirstBit(context.senderIV), partialIV)
+    nonce = _constructAeadNonce(context.aeadAlgorithm, partialIV, requestKid, context.commonIV)
 
     aad = _constructAAD(version,
-                        code,
-                        u.buf2str(m.encodeOptions(optionsClassI)),
                         context.aeadAlgorithm.value,
                         requestKid,
-                        requestSeq)
+                        requestSeq,
+                        u.buf2str(m.encodeOptions(optionsClassI)),
+                        )
 
     ciphertext = context.aeadAlgorithm.authenticateAndEncrypt(
         aad=aad,
@@ -75,24 +77,23 @@ def protectMessage(context, version, code, options=[], payload=[], partialIV=Non
         key=context.senderKey,
         nonce=nonce)
 
-    if not _isRequest(code):  # do not encode sequence number and kid in the response
-        requestSeq = []
-        requestKid = []
+    if not _isRequest(code):  # response
+        # do not encode sequence number, kid  or kid context in the OSCORE option value
+        objectSecurityOption.setValue(_encodeCompressedCOSE(None, None, None))
+        # code is always 2.04 Changed
+        protectedCode = d.COAP_RC_2_04_CHANGED
+    else: # request
+        # encode sequence number, kid and kid context
+        objectSecurityOption.setValue(_encodeCompressedCOSE(requestSeq, requestKid, context.idContext))
+        # code is always POST
+        protectedCode = d.METHOD_POST
 
-    # encode according to OSCOAP draft
-    finalPayload = _encodeCompressedCOSE(requestSeq, requestKid, ciphertext)
-
-    if payload:
-        return (optionsClassI + optionsClassU, finalPayload)
-    else:
-        objectSecurityOption.setValue(finalPayload)
-        return (optionsClassI + optionsClassU, [])
-
+    return (protectedCode, optionsClassI + optionsClassU, u.str2buf(ciphertext))
 
 def unprotectMessage(context, version, code, options=[], ciphertext=[], partialIV=None):
     """
-    A function which verifies and decrypts the incoming CoAP message using OSCOAP according to
-    draft-ietf-core-object-security-03.
+    A function which verifies and decrypts the incoming CoAP message using OSCORE according to
+    rfc8613.
 
     :param context security context to use to verify+decrypt the outgoing message.
     :param version CoAP version field of the incoming message.
@@ -112,29 +113,24 @@ def unprotectMessage(context, version, code, options=[], ciphertext=[], partialI
     (optionsClassE, optionsClassI, optionsClassU) = _splitOptions(options)
 
     if optionsClassE:
-        raise e.messageFormatError('invalid oscoap message. E-class option present in the outer message')
+        raise e.messageFormatError('invalid oscore message. E-class option present in the outer message')
 
     if _isRequest(code):
         requestKid = context.recipientID
         if not context.replayWindowLookup(u.buf2int(u.str2buf(partialIV))):
-            raise e.oscoapError('Replay protection failed')
+            raise e.oscoreError('Replay protection failed')
     else:
         requestKid = context.senderID
 
     requestSeq = partialIV.lstrip('\0')
 
     aad = _constructAAD(version,
-                        code,
-                        u.buf2str(m.encodeOptions(optionsClassI)),
                         context.aeadAlgorithm.value,
                         requestKid,
-                        requestSeq)
+                        requestSeq,
+                        u.buf2str(m.encodeOptions(optionsClassI)),)
 
-    # construct nonce
-    if _isRequest(code):  # verifying request
-        nonce = u.xorStrings(context.recipientIV, partialIV)
-    else:  # verifying response
-        nonce = u.xorStrings(u.flipFirstBit(context.recipientIV), partialIV)
+    nonce = _constructAeadNonce(context.aeadAlgorithm, partialIV, requestKid, context.commonIV)
 
     try:
         plaintext = context.aeadAlgorithm.authenticateAndDecrypt(
@@ -142,51 +138,55 @@ def unprotectMessage(context, version, code, options=[], ciphertext=[], partialI
             ciphertext=u.buf2str(ciphertext),
             key=context.recipientKey,
             nonce=nonce)
-    except e.oscoapError:
+
+        plaintextBuf = u.str2buf(plaintext)
+        decryptedCode = plaintextBuf[0]
+        plaintextBuf = plaintext[1:]
+    except e.oscoreError:
         raise
 
     if _isRequest(code):
         context.replayWindowUpdate(u.buf2int(u.str2buf(partialIV)))
 
-    # returns a tuple (innerOptions, payload)
-    return m.decodeOptionsAndPayload(u.str2buf(plaintext))
-
+    (innerOptions, payload) = m.decodeOptionsAndPayload(u.str2buf(plaintextBuf))
+    # returns a tuple (decryptedCode, innerOptions, payload)
+    return (decryptedCode, innerOptions, payload)
 
 def parseObjectSecurity(optionValue, payload):
-    if optionValue and payload:
-        raise e.messageFormatError('invalid oscoap message, both payload and value are set.')
-    elif optionValue:
-        buffer = optionValue
-    elif payload:
-        buffer = payload
-    else:
-        raise e.messageFormatError('invalid oscoap message. no value or payload found.')
 
     returnVal = {}
 
+    if len(optionValue) == 0:
+        optionValue = [0]
+
     # decode first byte
-    pivsz = (buffer[0] >> 0) & 0x07
-    k = (buffer[0] >> 3) & 0x01
-    reserved = (buffer[0] >> 4) & 0x0f
+    n = (optionValue[0] >> 0) & 0x07
+    k = (optionValue[0] >> 3) & 0x01
+    h = (optionValue[0] >> 4) & 0x01
+    reserved = (optionValue[0] >> 5) & 0x07
 
     if reserved:
-        raise e.messageFormatError('invalid oscoap message. reserved bits set.')
+        raise e.messageFormatError('invalid oscore message. reserved bits set.')
 
-    buffer = buffer[1:]
+    optionValue = optionValue[1:]
 
     returnVal['partialIV'] = []
-    if pivsz:
-        returnVal['partialIV'] = buffer[:pivsz]
-        buffer = buffer[pivsz:]
+    if n:
+        returnVal['partialIV'] = optionValue[:n]
+        optionValue = optionValue[n:]
+
+    returnVal['kidContext'] = None
+    if h:
+        kidContextLen = optionValue[0]
+        optionValue = optionValue[1:]
+        returnVal['kidContext'] = optionValue[:kidContextLen]
+        optionValue = optionValue[kidContextLen:]
 
     returnVal['kid'] = []
     if k:
-        kidLength = buffer[0]
-        buffer = buffer[1:]
-        returnVal['kid'] = buffer[:kidLength]
-        buffer = buffer[kidLength:]
+        returnVal['kid'] = optionValue
 
-    returnVal['ciphertext'] = buffer
+    returnVal['ciphertext'] = payload
 
     return returnVal
 
@@ -210,51 +210,80 @@ def objectSecurityOptionLookUp(options):
 
 
 '''
-   7 6 5 4 3 2 1 0
-  +-+-+-+-+-+-+-+-+  k: kid flag bit
-  |0 0 0 0|k|pivsz|  pivsz: Partial IV size (3 bits)
-  +-+-+-+-+-+-+-+-+
+          0 1 2 3 4 5 6 7 <------------- n bytes -------------->
+         +-+-+-+-+-+-+-+-+--------------------------------------
+         |0 0 0|h|k|  n  |       Partial IV (if any) ...
+         +-+-+-+-+-+-+-+-+--------------------------------------
 
-+-------+---------+------------+
-|       | Request | Resp with- |
-|       |         | out observe|
-+-------+---------+------------+
-|     k |    1    |     0      |
-| pivsz |  > 0    |     0      |
-+-------+---------+------------+
+          <- 1 byte -> <----- s bytes ------>
+         +------------+----------------------+------------------+
+         | s (if any) | kid context (if any) | kid (if any) ... |
+         +------------+----------------------+------------------+
+
 
 '''
-
-
-def _encodeCompressedCOSE(partialIV, kid, ciphertext):
+def _encodeCompressedCOSE(partialIV, kid, kidContext):
     buffer = []
 
-    if kid:
-        kidFlag = 1
-    else:
-        kidFlag = 0
+    h = 1 if kidContext is not None else 0
 
-    buffer += [kidFlag << 3 | len(partialIV)]  # flag byte
+    kidFlag = 1 if kid is not None else 0
 
-    if partialIV:
+    partialIVLen = 0 if partialIV is None else len(partialIV)
+
+    buffer += [h << 4 | kidFlag << 3 | partialIVLen]  # flag byte
+
+    if partialIVLen:
         buffer += u.str2buf(partialIV)
-    if kid:
-        buffer += [len(kid)]
+    if h:
+        buffer += [len(kidContext)]
+        buffer += u.str2buf(kidContext)
+    if kidFlag:
         buffer += u.str2buf(kid)
 
-    buffer += u.str2buf(ciphertext)
-
+    if buffer == [0]:
+        return []
     return buffer
 
+'''
+              <- nonce length minus 6 B -> <-- 5 bytes -->
+         +---+-------------------+--------+---------+-----+
+         | S |      padding      | ID_PIV | padding | PIV |----+
+         +---+-------------------+--------+---------+-----+    |
+                                                               |
+          <---------------- nonce length ---------------->     |
+         +------------------------------------------------+    |
+         |                   Common IV                    |->(XOR)
+         +------------------------------------------------+    |
+                                                               |
+          <---------------- nonce length ---------------->     |
+         +------------------------------------------------+    |
+         |                     Nonce                      |<---+
+         +------------------------------------------------+
+'''
+def _constructAeadNonce(aeadAlgorithm, piv, idPiv, commonIV):
 
-def _constructAAD(version, code, optionsSerialized, aeadAlgorithm, requestKid, requestSeq):
+    nonceLen = aeadAlgorithm.ivLength
+
+    pivBuf = u.str2buf(piv.lstrip('\0'))
+    idPivBuf = u.str2buf(idPiv)
+
+    pivPadded = [0] * (5 - len(pivBuf)) + pivBuf
+    idPivPadded = [0] * (nonceLen - 6 - len(idPivBuf)) + idPivBuf
+
+    buf = [len(idPivBuf)] + idPivPadded + pivPadded
+
+    assert len(buf) == nonceLen
+
+    return u.xorStrings(commonIV, u.buf2str(buf))
+
+def _constructAAD(version, aeadAlgorithm, requestKid, requestSeq, optionsSerialized):
     externalAad = cbor.dumps([
         version,
-        code,
-        optionsSerialized,
-        aeadAlgorithm,
+        [aeadAlgorithm],
         requestKid,
-        requestSeq
+        requestSeq,
+        optionsSerialized
     ])
 
     # from https://tools.ietf.org/html/draft-ietf-cose-msg-24#section-5.3
@@ -273,11 +302,11 @@ def _splitOptions(options):
     classU = []
 
     for option in options:
-        if option.oscoapClass == d.OSCOAP_CLASS_E:
+        if option.oscoreClass == d.OSCORE_CLASS_E:
             classE += [option]
-        if option.oscoapClass == d.OSCOAP_CLASS_I:
+        if option.oscoreClass == d.OSCORE_CLASS_I:
             classI += [option]
-        if option.oscoapClass == d.OSCOAP_CLASS_U:
+        if option.oscoreClass == d.OSCORE_CLASS_U:
             classU += [option]
     return (classE, classI, classU)
 
@@ -289,7 +318,6 @@ def _isRequest(code):
         return False
     else:
         raise NotImplementedError()
-
 
 class CCMAlgorithm(object):
     __metaclass__ = ABCMeta
@@ -316,14 +344,18 @@ class CCMAlgorithm(object):
     def maxSequenceNumber(self):
         raise NotImplementedError
 
+    @property
+    def maxIdLen(self):
+        raise NotImplementedError
+
     # ======================== public ==========================================
 
     def authenticateAndEncrypt(self, aad, plaintext, key, nonce):
         if self.keyLength != len(key):
-            raise e.oscoapError('Key length mismatch.')
+            raise e.oscoreError('Key length mismatch.')
 
         if self.ivLength != len(nonce):
-            raise e.oscoapError('IV length mismatch.')
+            raise e.oscoreError('IV length mismatch.')
 
         cipher = AES.new(key, AES.MODE_CCM, nonce, mac_len=self.tagLength)
         if aad:
@@ -344,7 +376,7 @@ class CCMAlgorithm(object):
             cipher.verify(digest)
             return plaintext
         except ValueError:
-            raise e.oscoapError('Invalid tag verification.')
+            raise e.oscoreError('Invalid tag verification.')
 
 
 class AES_CCM_64_64_128(CCMAlgorithm):
@@ -353,7 +385,7 @@ class AES_CCM_64_64_128(CCMAlgorithm):
     ivLength = 7
     tagLength = 8
     maxSequenceNumber = 2 ** (min(ivLength * 8, 56) - 1) - 1
-
+    maxIdLen = ivLength - 6
 
 class AES_CCM_16_64_128(CCMAlgorithm):
     value = d.COSE_AES_CCM_16_64_128
@@ -361,96 +393,131 @@ class AES_CCM_16_64_128(CCMAlgorithm):
     ivLength = 13
     tagLength = 8
     maxSequenceNumber = 2 ** (min(ivLength * 8, 56) - 1) - 1
-
+    maxIdLen = ivLength - 6
 
 class SecurityContext:
     REPLAY_WINDOW_SIZE = 64
 
-    def __init__(self, masterSecret, senderID, recipientID, aeadAlgorithm=AES_CCM_64_64_128(), masterSalt='',
-                 hashFunction=hashlib.sha256):
+    #def __init__(self, masterSecret, senderID, recipientID, idContext=None, aeadAlgorithm=AES_CCM_16_64_128(), masterSalt='',
+    #             hashFunction=hashlib.sha256):
+    def __init__(self, securityContextFilePath):
 
-        # Common context
-        self.aeadAlgorithm = aeadAlgorithm
-        self.hashFunction = hashFunction
-        self.masterSecret = masterSecret
-        self.masterSalt = masterSalt
+        self.securityContextFilePath = securityContextFilePath
+        self.lock     = threading.RLock()
 
-        # Sender context
-        self.senderID = senderID
+        with open(self.securityContextFilePath, "r") as contextFile:
+
+            self.securityContext = json.load(contextFile)
+
+            # Instantiate AEAD algorithm
+            aeadAlgorithmClassName = self.securityContext['aeadAlgorithm']
+            aeadAlgorithmClass = getattr(sys.modules[__name__], aeadAlgorithmClassName)
+            self.aeadAlgorithm = aeadAlgorithmClass()
+
+            # Instantiate the hash function
+            hashFunctionClassName = self.securityContext['hashFunction']
+            self.hashFunction = getattr(hashlib, hashFunctionClassName)
+
+            # mandatory parameters
+            self.masterSecret = binascii.unhexlify(self.securityContext['masterSecret'])
+            self.senderID = binascii.unhexlify(self.securityContext['senderID'])
+            self.recipientID = binascii.unhexlify(self.securityContext['recipientID'])
+
+            # optional parameters
+            if 'masterSalt' in self.securityContext:
+                self.masterSalt = binascii.unhexlify(self.securityContext['masterSalt'])
+            else:
+                self.masterSalt = ''
+
+            if 'idContext' in self.securityContext:
+                self.idContext = binascii.unhexlify(self.securityContext['idContext'])
+            else:
+                self.idContext = None
+
+            if len(self.senderID) > self.aeadAlgorithm.maxIdLen or len(self.recipientID) > self.aeadAlgorithm.maxIdLen:
+                raise e.oscoreError('Max ID length for AEAD algorithm {0} is {1}.'.format(self.aeadAlgorithm.value, self.aeadAlgorithm.maxIdLen))
+
+        # Derived parameters
+        self.commonIV = self._hkdfDeriveParameter(self.hashFunction,
+                                                  self.masterSecret,
+                                                  self.masterSalt,
+                                                  '',
+                                                  self.idContext,
+                                                  self.aeadAlgorithm.value,
+                                                  'IV',
+                                                  self.aeadAlgorithm.ivLength
+                                                  )
+
         self.senderKey = self._hkdfDeriveParameter(self.hashFunction,
                                                    self.masterSecret,
                                                    self.masterSalt,
                                                    self.senderID,
+                                                   self.idContext,
                                                    self.aeadAlgorithm.value,
                                                    'Key',
                                                    self.aeadAlgorithm.keyLength
                                                    )
 
-        self.senderIV = self._hkdfDeriveParameter(self.hashFunction,
-                                                  self.masterSecret,
-                                                  self.masterSalt,
-                                                  self.senderID,
-                                                  self.aeadAlgorithm.value,
-                                                  'IV',
-                                                  self.aeadAlgorithm.ivLength
-                                                  )
-        self.sequenceNumber = 0
-
-        # Recipient context
-        self.recipientID = recipientID
         self.recipientKey = self._hkdfDeriveParameter(self.hashFunction,
                                                       self.masterSecret,
                                                       self.masterSalt,
                                                       self.recipientID,
+                                                      self.idContext,
                                                       self.aeadAlgorithm.value,
                                                       'Key',
                                                       self.aeadAlgorithm.keyLength
                                                       )
-        self.recipientIV = self._hkdfDeriveParameter(self.hashFunction,
-                                                     self.masterSecret,
-                                                     self.masterSalt,
-                                                     self.recipientID,
-                                                     self.aeadAlgorithm.value,
-                                                     'IV',
-                                                     self.aeadAlgorithm.ivLength
-                                                     )
-        self.replayWindow = [0]
+
 
     # ======================== public ==========================================
-
-    def getSequenceNumber(self):
-        self.sequenceNumber += 1
-        if self.sequenceNumber > self.aeadAlgorithm.maxSequenceNumber:
-            raise e.oscoapError('Reached maximum sequence number.')
-        return self.sequenceNumber
 
     def getIVLength(self):
         return self.aeadAlgorithm.ivLength
 
     def replayWindowLookup(self, sequenceNumber):
-        if sequenceNumber in self.replayWindow:
+        if sequenceNumber in self.securityContext['replayWindow']:
             return False
 
-        if sequenceNumber < min(self.replayWindow):
+        if sequenceNumber < min(self.securityContext['replayWindow']):
             return False
 
         return True
 
-    def replayWindowUpdate(self, sequenceNumber):
-        assert sequenceNumber > min(self.replayWindow)
-        assert sequenceNumber not in self.replayWindow
+    def replayWindowUpdate(self, sequenceNumber, reset=False):
+        assert sequenceNumber > min(self.securityContext['replayWindow'])
+        assert sequenceNumber not in self.securityContext['replayWindow']
 
-        if len(self.replayWindow) == self.REPLAY_WINDOW_SIZE:
-            self.replayWindow.remove(min(self.replayWindow))
+        with self.lock:
+            if len(self.securityContext['replayWindow']) == self.REPLAY_WINDOW_SIZE:
+                self.securityContext['replayWindow'].remove(min(self.securityContext['replayWindow']))
 
-        self.replayWindow += [sequenceNumber]
+            if reset is False:
+                self.securityContext['replayWindow'] += [sequenceNumber]
+            else:
+                self.securityContext['replayWindow'] = [sequenceNumber]
+
+            with open(self.securityContextFilePath, "w") as contextFile:
+                json.dump(self.securityContext, contextFile, indent=4, sort_keys=True)
+        return
+
+    def getSequenceNumber(self):
+        with self.lock:
+            self.securityContext['sequenceNumber'] += 1
+
+            if self.securityContext['sequenceNumber'] > self.aeadAlgorithm.maxSequenceNumber:
+                raise e.oscoreError('Reached maximum sequence number.')
+
+            with open(self.securityContextFilePath, "w") as contextFile:
+                json.dump(self.securityContext, contextFile, indent=4, sort_keys=True)
+        return self.securityContext['sequenceNumber']
 
     # ======================== private ==========================================
 
-    def _hkdfDeriveParameter(self, hashFunction, masterSecret, masterSalt, id, algorithm, type, length):
+    def _hkdfDeriveParameter(self, hashFunction, masterSecret, masterSalt, id, idContext, algorithm, type, length):
 
         info = cbor.dumps([
             id,
+            idContext,
             algorithm,
             unicode(type),  # encode as text string
             length
